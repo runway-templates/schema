@@ -1,0 +1,407 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json",
+  "title": "Runway Template",
+  "description": "A Runway template describes a deployable group of services. Templates compile to Runway app shells via the platform's internal API.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "services"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "schema.runway.horse/templates/v1alpha1",
+      "description": "API version of the template format."
+    },
+    "kind": {
+      "type": "string",
+      "const": "Template",
+      "description": "Resource kind. Always 'Template' for this schema."
+    },
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "inputs": {
+      "type": "object",
+      "description": "User-supplied inputs collected at deploy time. Keys must be valid identifiers.",
+      "patternProperties": {
+        "^[a-zA-Z_][a-zA-Z0-9_]*$": { "$ref": "#/$defs/input" }
+      },
+      "additionalProperties": false
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/service" }
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "required": ["name", "version", "displayName", "description", "category"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}$",
+          "description": "Unique template identifier. Lowercase, hyphen-separated, 2-63 chars."
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+){0,2}([+-][a-zA-Z0-9.-]+)?$",
+          "description": "Template version. Recommended: SemVer. The first deploy of a new version triggers update notifications for existing instances."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Human-readable name for the marketplace UI."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "description": "Short description shown in the marketplace. Markdown not supported here."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["database", "cache", "search", "storage", "queue", "automation", "cms", "analytics", "monitoring", "messaging", "ai", "developer-tools", "other"],
+          "description": "Primary category for marketplace browsing."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,30}$"
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "description": "Free-form tags for search."
+        },
+        "logo": {
+          "type": "string",
+          "description": "Path to the logo file relative to the template directory. SVG preferred, PNG accepted."
+        },
+        "documentation": {
+          "type": "string",
+          "format": "uri",
+          "description": "Link to upstream documentation."
+        },
+        "website": {
+          "type": "string",
+          "format": "uri",
+          "description": "Link to the project's homepage."
+        },
+        "source": {
+          "type": "string",
+          "format": "uri",
+          "description": "Link to the upstream source repository."
+        },
+        "license": {
+          "type": "string",
+          "description": "SPDX license identifier of the upstream software (e.g. 'MIT', 'AGPL-3.0')."
+        },
+        "maintainer": {
+          "type": "string",
+          "description": "Maintainer of this template (not the upstream software). Email or GitHub handle."
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["string", "integer", "boolean"],
+          "description": "Input value type. Complex types are not supported in v1alpha1."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Help text shown next to the input field in the deploy UI."
+        },
+        "default": {
+          "description": "Default value. Type must match 'type'. Presence implies 'required: false' unless overridden."
+        },
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the user must provide a value before deploy."
+        },
+        "secret": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the value is stored encrypted, masked in logs, and rendered as a password field in the UI."
+        },
+        "enum": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "description": "Restrict the value to one of these options. UI renders as a dropdown. Only valid for type=string or type=integer."
+        },
+        "min": {
+          "type": "integer",
+          "description": "Minimum value (type=integer only)."
+        },
+        "max": {
+          "type": "integer",
+          "description": "Maximum value (type=integer only)."
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum string length (type=string only)."
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum string length (type=string only)."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Regex the value must match (type=string only). RE2 syntax."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["postgres-connection", "redis-connection", "smtp-credentials", "s3-credentials", "oauth-credentials", "general"],
+          "default": "general",
+          "description": "UI hint. Inputs in the same category may be grouped and offered platform shortcuts (e.g. 'Create a Postgres add-on to fill these in')."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "boolean" } } },
+          "then": { "not": { "anyOf": [{ "required": ["enum"] }, { "required": ["pattern"] }, { "required": ["min"] }, { "required": ["max"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "integer" } } },
+          "then": { "not": { "anyOf": [{ "required": ["pattern"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "string" } } },
+          "then": { "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] } }
+        }
+      ]
+    },
+    "service": {
+      "type": "object",
+      "required": ["name", "image"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,61}[a-z0-9]$",
+          "description": "Service name. Becomes the Kubernetes namespace and Service name. Must be a valid DNS-1123 label."
+        },
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Container image reference. Must be digest-pinned (image@sha256:...) for production templates."
+        },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Override the image's ENTRYPOINT. Equivalent to Kubernetes' container.command."
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Override the image's CMD. Equivalent to Kubernetes' container.args."
+        },
+        "env": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z_][A-Z0-9_]*$": { "$ref": "#/$defs/envValue" }
+          },
+          "additionalProperties": false,
+          "description": "Environment variables for the main container. Keys must be valid env var identifiers (uppercase, underscores). Init containers and workers inherit these by default."
+        },
+        "volume": { "$ref": "#/$defs/volume" },
+        "init": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/initContainer" },
+          "description": "Containers that run to completion before the main container starts. Run sequentially, in array order."
+        },
+        "workers": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/workerContainer" },
+          "description": "Long-running sidecar containers in the same pod. Share the volume and env of the parent service."
+        },
+        "outputs": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z_][A-Z0-9_]*$": {
+              "type": "string",
+              "description": "Value made available to other services as ${{ ServiceName.OUTPUT }}. May reference env vars and platform variables."
+            }
+          },
+          "additionalProperties": false
+        },
+        "healthcheck": { "$ref": "#/$defs/healthcheck" },
+        "resources": { "$ref": "#/$defs/resources" }
+      }
+    },
+    "envValue": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Shorthand: literal string or interpolation. Equivalent to { value: <string> }."
+        },
+        {
+          "type": "object",
+          "required": ["value"],
+          "additionalProperties": false,
+          "properties": {
+            "value": {
+              "type": "string",
+              "description": "The value. May contain ${VAR}, ${{ inputs.X }}, ${{ services.Y.Z }}, ${secret(N)}, and ${RUNWAY_*} interpolations."
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 256,
+              "description": "Shown in the platform's config UI next to this variable."
+            },
+            "warning": {
+              "type": "string",
+              "maxLength": 512,
+              "description": "Shown to the user when they attempt to change this value. Use for footguns like encryption keys whose loss is unrecoverable."
+            }
+          }
+        }
+      ]
+    },
+    "volume": {
+      "type": "object",
+      "required": ["mountPath"],
+      "additionalProperties": false,
+      "properties": {
+        "mountPath": {
+          "type": "string",
+          "pattern": "^/[^\\s]*$",
+          "description": "Absolute path inside the container where the volume is mounted."
+        }
+      },
+      "description": "Declares that this service requires persistent storage. Size is determined by the user's plan, not the template. Implies the service deploys as a StatefulSet."
+    },
+    "initContainer": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,61}[a-z0-9]$",
+          "description": "Container name. Unique within the service."
+        },
+        "image": {
+          "type": "string",
+          "description": "Container image. Defaults to the parent service's image."
+        },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "env": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z_][A-Z0-9_]*$": { "$ref": "#/$defs/envValue" }
+          },
+          "additionalProperties": false,
+          "description": "Additional env vars. Merged on top of the parent service's env. Keys defined here override parent values for this container only."
+        }
+      }
+    },
+    "workerContainer": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,61}[a-z0-9]$"
+        },
+        "image": {
+          "type": "string",
+          "description": "Defaults to the parent service's image."
+        },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "env": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z_][A-Z0-9_]*$": { "$ref": "#/$defs/envValue" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "healthcheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["tcp", "http", "exec"],
+          "default": "tcp",
+          "description": "Probe type. 'tcp' is sufficient for most templates and is inferred from the PORT env var. Specify 'http' or 'exec' only when needed."
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Path for HTTP health check (type=http only)."
+        },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Command for exec health check (type=exec only). Returns 0 = healthy."
+        },
+        "initialDelaySeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 600,
+          "default": 5
+        },
+        "periodSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "default": 10
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 3
+        }
+      },
+      "description": "Health check configuration. If omitted, the platform infers a TCP probe against the PORT env var."
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {
+          "type": "string",
+          "pattern": "^[0-9]+(m|\\.[0-9]+)?$",
+          "description": "Suggested CPU request. Kubernetes-style: '100m' = 0.1 CPU, '1' = 1 CPU. Treated as a hint; the user's plan determines actual limits."
+        },
+        "memory": {
+          "type": "string",
+          "pattern": "^[0-9]+(Mi|Gi|M|G)$",
+          "description": "Suggested memory request. Kubernetes-style: '256Mi', '1Gi'. Hint only."
+        }
+      },
+      "description": "Resource hints. The user's plan, not the template, determines the final limits."
+    }
+  }
+}
