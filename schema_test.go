@@ -38,10 +38,10 @@ func yamlFiles(t *testing.T, dir string) []string {
 // satisfies the schema. New templates added there must validate.
 func TestValidFixtures(t *testing.T) {
 	t.Parallel()
-	for _, name := range yamlFiles(t, "testdata/valid") {
+	for _, name := range yamlFiles(t, validFixturesDir) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, schema.ValidateFile(filepath.Join("testdata/valid", name)))
+			assert.NoError(t, schema.ValidateFile(validFixture(name)))
 		})
 	}
 }
@@ -50,10 +50,10 @@ func TestValidFixtures(t *testing.T) {
 // validation. Each file's name describes the violation it demonstrates.
 func TestInvalidFixtures(t *testing.T) {
 	t.Parallel()
-	for _, name := range yamlFiles(t, "testdata/invalid") {
+	for _, name := range yamlFiles(t, invalidFixturesDir) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			assert.Error(t, schema.ValidateFile(filepath.Join("testdata/invalid", name)),
+			assert.Error(t, schema.ValidateFile(invalidFixture(name)),
 				"expected validation error")
 		})
 	}
