@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: mongodb
+  version: 8.0.0
+  displayName: MongoDB
+  description: |
+    Document database. Single instance with persistence on a volume. Suitable
+    for development, staging, and small production workloads. For replica sets
+    or sharding, use a dedicated MongoDB operator.
+  category: database
+  tags: [mongodb, nosql, document, json]
+  logo: ./logo.svg
+  documentation: https://www.mongodb.com/docs/manual/
+  website: https://www.mongodb.com
+  source: https://github.com/mongodb/mongo
+  license: SSPL-1.0
+  maintainer: runway-team
+
+inputs:
+  image_tag:
+    type: string
+    default: "8.0"
+    enum: ["8.0", "7.0", "6.0"]
+    description: |
+      MongoDB version. 8.0 is the current stable. Major-version upgrades
+      require following the upstream upgrade procedure (downgrade
+      featureCompatibilityVersion first); do not change this after deployment.
+
+  database_name:
+    type: string
+    default: "app"
+    pattern: "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$"
+    description: Name of the application database. Created on first connection.
+
+  username:
+    type: string
+    default: "app"
+    pattern: "^[a-zA-Z][a-zA-Z0-9_-]{0,31}$"
+    description: Root user (admin database) created on first start. Has full cluster access.
+
+services:
+  - name: mongodb
+    image: "r.planetary-quantum.com/docker-hub-proxy/library/mongo:${{ inputs.image_tag }}"
+
+    command:
+      - mongod
+      - --auth
+      - --bind_ip_all
+      - --dbpath
+      - /data/db
+
+    env:
+      PORT: "27017"
+      MONGO_INITDB_ROOT_USERNAME: "${{ inputs.username }}"
+      MONGO_INITDB_ROOT_PASSWORD:
+        value: "${secret(32)}"
+        warning: |
+          Root password. Set on first start only; changing this value here
+          does NOT update the password inside MongoDB. Use db.changeUserPassword()
+          over a connection to actually rotate.
+      MONGO_INITDB_DATABASE: "${{ inputs.database_name }}"
+
+    volume:
+      mountPath: /data/db
+
+    outputs:
+      DSN: "mongodb://${{ inputs.username }}:${MONGO_INITDB_ROOT_PASSWORD}@${RUNWAY_FQDN}:27017/${{ inputs.database_name }}?authSource=admin"
+      HOST: "${RUNWAY_FQDN}"
+      PORT: "27017"
+      DATABASE: "${{ inputs.database_name }}"
+      USERNAME: "${{ inputs.username }}"
+      PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
+
+    healthcheck:
+      type: exec
+      command:
+        - mongosh
+        - --quiet
+        - --eval
+        - "db.adminCommand('ping')"
+      initialDelaySeconds: 30
+      periodSeconds: 10
+
+    resources:
+      cpu: "200m"
+      memory: "512Mi"

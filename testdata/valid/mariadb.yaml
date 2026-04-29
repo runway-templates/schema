@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: mariadb
+  version: 11.8.0
+  displayName: MariaDB
+  description: |
+    Open-source relational database, fork of MySQL. Single instance with
+    persistence on a volume. Defaults to the LTS line; the latest stable line
+    is also available.
+  category: database
+  tags: [mariadb, sql, rdbms, mysql-compatible]
+  logo: ./logo.svg
+  documentation: https://mariadb.com/docs/server/
+  website: https://mariadb.org
+  source: https://github.com/MariaDB/server
+  license: GPL-2.0-or-later
+  maintainer: runway-team
+
+inputs:
+  image_tag:
+    type: string
+    default: "lts"
+    enum: ["lts", "11.8", "12.2"]
+    description: |
+      MariaDB version line. 'lts' (currently 11.8) is recommended for
+      production. '12.2' is the latest stable. Major-version upgrades require
+      a manual mariadb-upgrade run; do not change this after deployment.
+
+  database_name:
+    type: string
+    default: "app"
+    pattern: "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+    description: Name of the database created on first start.
+
+  username:
+    type: string
+    default: "app"
+    pattern: "^[a-zA-Z][a-zA-Z0-9_]{0,31}$"
+    description: Application user created on first start. Has full access to the database above.
+
+services:
+  - name: mariadb
+    image: "r.planetary-quantum.com/docker-hub-proxy/library/mariadb:${{ inputs.image_tag }}"
+
+    env:
+      PORT: "3306"
+      MARIADB_DATABASE: "${{ inputs.database_name }}"
+      MARIADB_USER: "${{ inputs.username }}"
+      MARIADB_PASSWORD:
+        value: "${secret(32)}"
+        warning: |
+          Changing this password requires updating all clients. The password
+          is also baked into the database on first start; changing it here
+          does NOT update it inside MariaDB. Use 'ALTER USER' over a SQL
+          connection to actually rotate.
+      MARIADB_ROOT_PASSWORD:
+        value: "${secret(40)}"
+        warning: |
+          Root password. Changing this here does NOT update the password
+          inside MariaDB; use 'ALTER USER' over a SQL connection.
+
+    volume:
+      mountPath: /var/lib/mysql
+
+    outputs:
+      DSN: "mysql://${{ inputs.username }}:${MARIADB_PASSWORD}@${RUNWAY_FQDN}:3306/${{ inputs.database_name }}"
+      HOST: "${RUNWAY_FQDN}"
+      PORT: "3306"
+      DATABASE: "${{ inputs.database_name }}"
+      USERNAME: "${{ inputs.username }}"
+      PASSWORD: "${MARIADB_PASSWORD}"
+      ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+
+    healthcheck:
+      type: exec
+      command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+      initialDelaySeconds: 30
+      periodSeconds: 10
+
+    resources:
+      cpu: "200m"
+      memory: "512Mi"

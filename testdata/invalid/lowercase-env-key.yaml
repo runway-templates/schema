@@ -1,0 +1,16 @@
+# violation: env keys must match ^[A-Z_][A-Z0-9_]*$.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: other
+
+services:
+  - name: web
+    image: nginx:1.27
+    env:
+      port: "8080"

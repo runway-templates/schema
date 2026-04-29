@@ -1,0 +1,169 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: n8n
+  version: 2.14.0
+  displayName: n8n
+  description: |
+    Workflow automation platform with 400+ integrations and native AI
+    capabilities. Self-hosted, fair-code license. Runs in queue mode with
+    a dedicated worker process; requires an external Postgres and Redis.
+  category: automation
+  tags: [n8n, workflow, automation, ai, low-code]
+  logo: ./logo.svg
+  documentation: https://docs.n8n.io
+  website: https://n8n.io
+  source: https://github.com/n8n-io/n8n
+  license: SustainableUse-1.0
+  maintainer: runway-team
+
+inputs:
+  image_tag:
+    type: string
+    default: "2.14"
+    description: |
+      n8n version. n8n ships a new minor most weeks; pin to a major.minor for
+      predictable updates. Workflows and credentials persist across upgrades.
+
+  public_url:
+    type: string
+    required: true
+    pattern: "^https://[^/]+/?$"
+    description: |
+      Public HTTPS URL where n8n will be reachable, including scheme. Example:
+      https://n8n.example.com. Webhooks and OAuth callbacks will use this.
+
+  timezone:
+    type: string
+    default: "Europe/Berlin"
+    description: IANA timezone for cron-style schedule triggers.
+
+  postgres_host:
+    type: string
+    required: true
+    category: postgres-connection
+    description: Postgres hostname.
+  postgres_port:
+    type: integer
+    default: 5432
+    min: 1
+    max: 65535
+    category: postgres-connection
+  postgres_database:
+    type: string
+    required: true
+    category: postgres-connection
+  postgres_user:
+    type: string
+    required: true
+    category: postgres-connection
+  postgres_password:
+    type: string
+    required: true
+    secret: true
+    category: postgres-connection
+
+  redis_host:
+    type: string
+    required: true
+    category: redis-connection
+    description: |
+      Redis or Valkey hostname. Used for queue state and webhook coordination
+      between the main process and the worker.
+  redis_port:
+    type: integer
+    default: 6379
+    min: 1
+    max: 65535
+    category: redis-connection
+  redis_password:
+    type: string
+    required: true
+    secret: true
+    category: redis-connection
+
+services:
+  - name: n8n
+    image: "r.planetary-quantum.com/docker-hub-proxy/n8nio/n8n:${{ inputs.image_tag }}"
+
+    command: ["n8n", "start"]
+
+    env:
+      PORT: "5678"
+
+      # --- Public URL configuration ---
+      N8N_HOST: "${{ inputs.public_url }}"
+      N8N_PROTOCOL: "https"
+      WEBHOOK_URL: "${{ inputs.public_url }}"
+      N8N_EDITOR_BASE_URL: "${{ inputs.public_url }}"
+
+      # --- Generic ---
+      GENERIC_TIMEZONE: "${{ inputs.timezone }}"
+      TZ: "${{ inputs.timezone }}"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "true"
+
+      # --- Encryption ---
+      N8N_ENCRYPTION_KEY:
+        value: "${secret(48)}"
+        warning: |
+          n8n uses this key to encrypt all stored credentials (API keys,
+          OAuth tokens, etc.). If this key is lost or changed, every
+          credential in the instance becomes permanently unreadable and
+          must be re-entered. Back this value up before any maintenance.
+
+      # --- Database (external Postgres) ---
+      DB_TYPE: "postgresdb"
+      DB_POSTGRESDB_HOST: "${{ inputs.postgres_host }}"
+      DB_POSTGRESDB_PORT: "${{ inputs.postgres_port }}"
+      DB_POSTGRESDB_DATABASE: "${{ inputs.postgres_database }}"
+      DB_POSTGRESDB_USER: "${{ inputs.postgres_user }}"
+      DB_POSTGRESDB_PASSWORD: "${{ inputs.postgres_password }}"
+
+      # --- Queue mode (Redis) ---
+      EXECUTIONS_MODE: "queue"
+      QUEUE_BULL_REDIS_HOST: "${{ inputs.redis_host }}"
+      QUEUE_BULL_REDIS_PORT: "${{ inputs.redis_port }}"
+      QUEUE_BULL_REDIS_PASSWORD: "${{ inputs.redis_password }}"
+      QUEUE_HEALTH_CHECK_ACTIVE: "true"
+
+      # --- Security ---
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_GIT_NODE_DISABLE_BARE_REPOS: "true"
+
+    volume:
+      mountPath: /home/node/.n8n
+
+    init:
+      - name: migrate
+        # Runs upstream's migration command. n8n's start command also runs
+        # migrations on boot, but doing it explicitly makes failures visible
+        # before the worker tries to start against an old schema.
+        command: ["n8n", "db:migrate"]
+
+    workers:
+      - name: queue-worker
+        # Long-running worker process that pulls jobs from the Redis queue.
+        # Inherits image and env from the parent. Add --concurrency to scale
+        # parallelism; the default (10) is fine for most workloads.
+        command: ["n8n", "worker"]
+
+    outputs:
+      URL: "${{ inputs.public_url }}"
+      INTERNAL_HOST: "${RUNWAY_FQDN}"
+      INTERNAL_PORT: "5678"
+
+    healthcheck:
+      type: http
+      path: /healthz
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 5
+
+    resources:
+      cpu: "500m"
+      memory: "1Gi"

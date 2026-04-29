@@ -1,0 +1,10 @@
+# violation: services is required and must contain at least one entry.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: other

@@ -1,0 +1,16 @@
+# violation: volume.mountPath must be absolute (start with /).
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: storage
+
+services:
+  - name: store
+    image: minio/minio:latest
+    volume:
+      mountPath: data

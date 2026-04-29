@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: meilisearch
+  version: 1.42.0
+  displayName: Meilisearch
+  description: |
+    Lightning-fast, open-source search engine. Provides typo tolerance,
+    faceting, filtering, geosearch, and AI-powered hybrid search out of the
+    box. Single instance with persistence on a volume.
+  category: search
+  tags: [meilisearch, search, full-text, vector, ai]
+  logo: ./logo.svg
+  documentation: https://www.meilisearch.com/docs
+  website: https://www.meilisearch.com
+  source: https://github.com/meilisearch/meilisearch
+  license: MIT
+  maintainer: runway-team
+
+inputs:
+  image_tag:
+    type: string
+    default: "v1.42"
+    enum: ["v1.42", "v1.41", "v1.40"]
+    description: |
+      Meilisearch version. Tag includes the 'v' prefix per upstream convention.
+      Database files are tied to the version that created them; downgrades
+      require a dump/restore.
+
+  environment:
+    type: string
+    default: "production"
+    enum: ["production", "development"]
+    description: |
+      'production' enforces the master key requirement and disables verbose
+      error messages. 'development' is more permissive but should not be
+      used for real workloads.
+
+services:
+  - name: meilisearch
+    image: "r.planetary-quantum.com/docker-hub-proxy/getmeili/meilisearch:${{ inputs.image_tag }}"
+
+    env:
+      PORT: "7700"
+      MEILI_HTTP_ADDR: "0.0.0.0:7700"
+      MEILI_DB_PATH: "/meili_data/data.ms"
+      MEILI_DUMP_DIR: "/meili_data/dumps"
+      MEILI_SNAPSHOT_DIR: "/meili_data/snapshots"
+      MEILI_ENV: "${{ inputs.environment }}"
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_MASTER_KEY:
+        value: "${secret(64)}"
+        warning: |
+          Master key. Used to derive all API keys (admin, search, etc.). If
+          you lose this key, you will need to re-create all API keys and
+          update every client. The key cannot be recovered from the database.
+
+    volume:
+      mountPath: /meili_data
+
+    outputs:
+      URL: "http://${RUNWAY_FQDN}:7700"
+      HOST: "${RUNWAY_FQDN}"
+      PORT: "7700"
+      MASTER_KEY: "${MEILI_MASTER_KEY}"
+
+    healthcheck:
+      type: http
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+
+    resources:
+      cpu: "200m"
+      memory: "512Mi"

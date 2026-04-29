@@ -1,0 +1,20 @@
+# violation: type=boolean inputs may not specify pattern, enum, min, max,
+# minLength, or maxLength (allOf rule on input definitions).
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: other
+
+inputs:
+  enable_tls:
+    type: boolean
+    pattern: "^(true|false)$"
+
+services:
+  - name: web
+    image: nginx:1.27
