@@ -1,0 +1,14 @@
+# violation: service.name must be a DNS-1123 label (lowercase, hyphenated).
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: other
+
+services:
+  - name: WebFrontend
+    image: nginx:1.27

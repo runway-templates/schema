@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: valkey
+  version: 9.0.3
+  displayName: Valkey
+  description: |
+    In-memory data store. Open-source fork of Redis maintained by the Linux
+    Foundation. Wire-compatible with Redis clients. Single instance with
+    persistence (AOF) on a volume.
+  category: cache
+  tags: [valkey, redis, cache, kv, queue, pubsub, oss]
+  logo: ./logo.svg
+  documentation: https://valkey.io/topics/
+  website: https://valkey.io
+  source: https://github.com/valkey-io/valkey
+  license: BSD-3-Clause
+  maintainer: runway
+
+inputs:
+  image_tag:
+    type: string
+    default: "9.0.3-alpine"
+    enum: ["9.0.3-alpine", "9.0.3-trixie"]
+    description: Valkey version.
+  maxmemory_policy:
+    type: string
+    default: noeviction
+    enum:
+      - noeviction
+      - allkeys-lru
+      - allkeys-lfu
+      - volatile-lru
+      - volatile-lfu
+      - allkeys-random
+      - volatile-random
+      - volatile-ttl
+    description: |
+      How Valkey evicts keys when memory is full. 'noeviction' refuses new writes
+      (safest for queues). 'allkeys-lru' evicts least-recently-used (typical for caches).
+
+services:
+  - name: valkey
+    image: "r.planetary-quantum.com/docker-hub-proxy/valkey/valkey:${{ inputs.image_tag }}"
+
+    command:
+      - valkey-server
+      - --requirepass
+      - "${VALKEY_PASSWORD}"
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - "${{ inputs.maxmemory_policy }}"
+      - --dir
+      - /data
+
+    env:
+      PORT: "6379"
+      VALKEY_PASSWORD:
+        value: "${secret(32)}"
+        warning: |
+          Changing this password requires updating all clients connecting to
+          this Valkey instance. Existing clients will fail to authenticate
+          until their config is updated.
+
+    volume:
+      mountPath: /data
+
+    outputs:
+      DSN: "redis://default:${VALKEY_PASSWORD}@${RUNWAY_FQDN}:6379"
+      HOST: "${RUNWAY_FQDN}"
+      PORT: "6379"
+      PASSWORD: "${VALKEY_PASSWORD}"
+
+    healthcheck:
+      type: tcp
+
+    resources:
+      cpu: "100m"
+      memory: "128Mi"

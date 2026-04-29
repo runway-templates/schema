@@ -1,0 +1,14 @@
+# violation: apiVersion must be the const "schema.runway.horse/templates/v1alpha1".
+apiVersion: runway.horse/v1beta1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: other
+
+services:
+  - name: web
+    image: nginx:1.27
