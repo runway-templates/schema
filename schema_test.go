@@ -199,18 +199,6 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
-			name: "resources.cpu must match Kubernetes-style pattern",
-			mutate: func(d map[string]any) {
-				d["services"].([]any)[0].(map[string]any)["resources"] = map[string]any{"cpu": "half"}
-			},
-		},
-		{
-			name: "resources.memory must match Kubernetes-style pattern",
-			mutate: func(d map[string]any) {
-				d["services"].([]any)[0].(map[string]any)["resources"] = map[string]any{"memory": "256megs"}
-			},
-		},
-		{
 			name:   "additionalProperties at top level rejected",
 			mutate: func(d map[string]any) { d["extra"] = true },
 		},

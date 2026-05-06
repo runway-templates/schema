@@ -84,3 +84,31 @@ func TestLintFile_n8n(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, issues)
 }
+
+// A service without minPlan produces a warning so template authors are
+// nudged to declare what tier their service realistically needs.
+func TestLint_MissingMinPlanWarns(t *testing.T) {
+	t.Parallel()
+	tmpl := loadFixture(t, "valkey.yaml")
+	tmpl.Services[0].MinPlan = ""
+	issues := schema.Lint(tmpl)
+	var got *schema.Issue
+	for i := range issues {
+		if issues[i].Path == "services[0].minPlan" {
+			got = &issues[i]
+		}
+	}
+	require.NotNil(t, got, "expected minPlan warning")
+	assert.Equal(t, schema.SeverityWarning, got.Severity)
+}
+
+// Fixtures that already declare minPlan must not warn.
+func TestLint_MinPlanDeclared(t *testing.T) {
+	t.Parallel()
+	for _, f := range []string{"mariadb.yaml", "meilisearch.yaml", "mongodb.yaml", "valkey.yaml", "n8n.yaml"} {
+		t.Run(f, func(t *testing.T) {
+			t.Parallel()
+			assert.NotContains(t, issuePaths(schema.Lint(loadFixture(t, f))), "services[0].minPlan")
+		})
+	}
+}

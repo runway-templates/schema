@@ -62,7 +62,7 @@ type Service struct {
 	Workers     []WorkerContainer   `json:"workers,omitempty"`
 	Outputs     map[string]string   `json:"outputs,omitempty"`
 	Healthcheck *Healthcheck        `json:"healthcheck,omitempty"`
-	Resources   *Resources          `json:"resources,omitempty"`
+	MinPlan     string              `json:"minPlan,omitempty"`
 }
 
 // EnvValue accepts either a bare string ("PORT": "8080") or the full object
@@ -119,11 +119,6 @@ type Healthcheck struct {
 	InitialDelaySeconds *int     `json:"initialDelaySeconds,omitempty"`
 	PeriodSeconds       *int     `json:"periodSeconds,omitempty"`
 	TimeoutSeconds      *int     `json:"timeoutSeconds,omitempty"`
-}
-
-type Resources struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
 }
 
 // DecodeFile reads a YAML or JSON template from path and returns the typed

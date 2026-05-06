@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json
+# yaml-language-server: $schema=../../v1alpha1.json
 apiVersion: schema.runway.horse/templates/v1alpha1
 kind: Template
 
@@ -77,6 +77,4 @@ services:
     healthcheck:
       type: tcp
 
-    resources:
-      cpu: "100m"
-      memory: "128Mi"
+    minPlan: free-launch
