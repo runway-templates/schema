@@ -84,6 +84,4 @@ services:
       initialDelaySeconds: 30
       periodSeconds: 10
 
-    resources:
-      cpu: "200m"
-      memory: "512Mi"
+    minPlan: dev-launch

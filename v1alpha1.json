@@ -239,7 +239,28 @@
           "additionalProperties": false
         },
         "healthcheck": { "$ref": "#/$defs/healthcheck" },
-        "resources": { "$ref": "#/$defs/resources" }
+        "minPlan": {
+          "type": "string",
+          "enum": [
+            "free-launch",
+            "dev-launch",
+            "start-m-launch",
+            "start-l-launch",
+            "start-xl-launch",
+            "scale-m-launch",
+            "scale-l-launch",
+            "scale-xl-launch",
+            "scaleplus-m-launch",
+            "scaleplus-l-launch",
+            "scaleplus-xl-launch",
+            "pro-m-launch",
+            "pro-l-launch",
+            "pro-xl-launch",
+            "proplus-m-launch",
+            "proplus-l-launch"
+          ],
+          "description": "Minimum plan SKU required for this service's app. Values match the platform's plan SKU (e.g. 'start-m-launch'). The platform validates the user's plan before deploy and prompts an upgrade if insufficient."
+        }
       }
     },
     "envValue": {
@@ -385,23 +406,6 @@
         }
       },
       "description": "Health check configuration. If omitted, the platform infers a TCP probe against the PORT env var."
-    },
-    "resources": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "cpu": {
-          "type": "string",
-          "pattern": "^[0-9]+(m|\\.[0-9]+)?$",
-          "description": "Suggested CPU request. Kubernetes-style: '100m' = 0.1 CPU, '1' = 1 CPU. Treated as a hint; the user's plan determines actual limits."
-        },
-        "memory": {
-          "type": "string",
-          "pattern": "^[0-9]+(Mi|Gi|M|G)$",
-          "description": "Suggested memory request. Kubernetes-style: '256Mi', '1Gi'. Hint only."
-        }
-      },
-      "description": "Resource hints. The user's plan, not the template, determines the final limits."
     }
   }
 }

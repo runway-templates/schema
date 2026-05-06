@@ -72,6 +72,4 @@ services:
       initialDelaySeconds: 10
       periodSeconds: 10
 
-    resources:
-      cpu: "200m"
-      memory: "512Mi"
+    minPlan: start-m-launch

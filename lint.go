@@ -52,7 +52,10 @@ func Lint(t *Template) []Issue {
 	if t == nil {
 		return nil
 	}
-	return lintLicense(t)
+	var issues []Issue
+	issues = append(issues, lintLicense(t)...)
+	issues = append(issues, lintMinPlan(t)...)
+	return issues
 }
 
 // LintFile decodes the template at path and returns its lint issues. It
@@ -64,6 +67,20 @@ func LintFile(path string) ([]Issue, error) {
 		return nil, err
 	}
 	return Lint(t), nil
+}
+
+func lintMinPlan(t *Template) []Issue {
+	var issues []Issue
+	for i, s := range t.Services {
+		if strings.TrimSpace(s.MinPlan) == "" {
+			issues = append(issues, Issue{
+				Path:     fmt.Sprintf("services[%d].minPlan", i),
+				Message:  "no minPlan declared; the platform will assume the cheapest plan that fits, which may surprise users on free or dev tiers",
+				Severity: SeverityWarning,
+			})
+		}
+	}
+	return issues
 }
 
 func lintLicense(t *Template) []Issue {

@@ -77,6 +77,4 @@ services:
     healthcheck:
       type: tcp
 
-    resources:
-      cpu: "100m"
-      memory: "128Mi"
+    minPlan: free-launch

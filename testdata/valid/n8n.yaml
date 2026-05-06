@@ -164,6 +164,4 @@ services:
       periodSeconds: 15
       timeoutSeconds: 5
 
-    resources:
-      cpu: "500m"
-      memory: "1Gi"
+    minPlan: start-l-launch

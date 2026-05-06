@@ -79,5 +79,3 @@ services:
       command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
       initialDelaySeconds: 30
       periodSeconds: 10
-
-    minPlan: dev-launch

@@ -64,28 +64,31 @@ func main() {
 						return fmt.Errorf("missing path argument")
 					}
 
-					if err := schema.ValidateFile(path); err != nil {
-						o.Printf("❌ %s is invalid: %s\n", path, err)
-						return err
+					validateErr := schema.ValidateFile(path)
+					if validateErr != nil {
+						o.Printf("❌ %s is invalid: %s\n", path, validateErr)
 					}
 
 					issues, err := schema.LintFile(path)
 					if err != nil {
-						o.Printf("❌ %s is invalid: %s\n", path, err)
+						o.Printf("❌ %s could not be linted: %s\n", path, err)
 						return err
 					}
 
-					if len(issues) == 0 {
+					if len(issues) > 0 {
+						o.Printf("Found issues: %d\n", len(issues))
+						for _, issue := range issues {
+							icon := "⚠️ "
+							if issue.Severity == schema.SeverityError {
+								icon = "❌"
+							}
+							o.Printf("%s %s: %s\n", icon, issue.Path, issue.Message)
+						}
+					} else if validateErr == nil {
 						o.Println("✅ no linting issues")
-						return nil
 					}
 
-					o.Printf("Found issues: %d\n", len(issues))
-
-					for _, issue := range issues {
-						o.Println("❌ " + issue.Message)
-					}
-					return nil
+					return validateErr
 				},
 			},
 			{
