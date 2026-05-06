@@ -1,5 +1,6 @@
-# violation: resources.cpu and resources.memory must use Kubernetes-style
-# units. "half" and "256megs" don't match the patterns.
+# yaml-language-server: $schema=../../v1alpha1.json
+# violation: minPlan must match a SKU from the platform's plan list.
+# "scale-massive-launch" is not a real SKU.
 apiVersion: schema.runway.horse/templates/v1alpha1
 kind: Template
 

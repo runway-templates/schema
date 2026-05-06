@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../v1alpha1.json
 # violation: services is required and must contain at least one entry.
 apiVersion: schema.runway.horse/templates/v1alpha1
 kind: Template
