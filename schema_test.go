@@ -182,6 +182,30 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "string input rejects integer default",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"tag": map[string]any{"type": "string", "default": 8080},
+				}
+			},
+		},
+		{
+			name: "integer input rejects string default",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"port": map[string]any{"type": "integer", "default": "8080"},
+				}
+			},
+		},
+		{
+			name: "boolean input rejects string default",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"flag": map[string]any{"type": "boolean", "default": "true"},
+				}
+			},
+		},
+		{
 			name: "input.enum requires at least 2 entries",
 			mutate: func(d map[string]any) {
 				d["inputs"] = map[string]any{
@@ -219,6 +243,23 @@ func TestSchemaRules(t *testing.T) {
 			assert.Error(t, err, "expected validation error")
 		})
 	}
+}
+
+// TestInputDefaultMatchesType asserts a default of the declared type is
+// accepted for each input type.
+func TestInputDefaultMatchesType(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	doc := baseDoc(t, func(d map[string]any) {
+		d["inputs"] = map[string]any{
+			"tag":  map[string]any{"type": "string", "default": "lts"},
+			"port": map[string]any{"type": "integer", "default": 8080},
+			"flag": map[string]any{"type": "boolean", "default": true},
+		}
+	})
+	assert.NoError(t, sch.Validate(doc))
 }
 
 func TestEnvValueAcceptsBothShapes(t *testing.T) {

@@ -119,7 +119,8 @@
           "description": "Help text shown next to the input field in the deploy UI."
         },
         "default": {
-          "description": "Default value. Type must match 'type'. Presence implies 'required: false' unless overridden."
+          "type": ["string", "integer", "boolean"],
+          "description": "Default value. Must match 'type' (enforced). Presence implies 'required: false' unless overridden."
         },
         "required": {
           "type": "boolean",
@@ -170,15 +171,24 @@
       "allOf": [
         {
           "if": { "properties": { "type": { "const": "boolean" } } },
-          "then": { "not": { "anyOf": [{ "required": ["enum"] }, { "required": ["pattern"] }, { "required": ["min"] }, { "required": ["max"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] } }
+          "then": {
+            "properties": { "default": { "type": "boolean" } },
+            "not": { "anyOf": [{ "required": ["enum"] }, { "required": ["pattern"] }, { "required": ["min"] }, { "required": ["max"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] }
+          }
         },
         {
           "if": { "properties": { "type": { "const": "integer" } } },
-          "then": { "not": { "anyOf": [{ "required": ["pattern"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] } }
+          "then": {
+            "properties": { "default": { "type": "integer" } },
+            "not": { "anyOf": [{ "required": ["pattern"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] }
+          }
         },
         {
           "if": { "properties": { "type": { "const": "string" } } },
-          "then": { "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] } }
+          "then": {
+            "properties": { "default": { "type": "string" } },
+            "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] }
+          }
         }
       ]
     },
