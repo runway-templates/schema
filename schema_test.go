@@ -206,6 +206,30 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "string input rejects integer enum items",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"mode": map[string]any{"type": "string", "enum": []any{"fast", 2}},
+				}
+			},
+		},
+		{
+			name: "integer input rejects string enum items",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"port": map[string]any{"type": "integer", "enum": []any{80, "8080"}},
+				}
+			},
+		},
+		{
+			name: "enum items cannot be booleans or objects",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"mode": map[string]any{"type": "string", "enum": []any{true, map[string]any{}}},
+				}
+			},
+		},
+		{
 			name: "input.enum requires at least 2 entries",
 			mutate: func(d map[string]any) {
 				d["inputs"] = map[string]any{
@@ -257,6 +281,22 @@ func TestInputDefaultMatchesType(t *testing.T) {
 			"tag":  map[string]any{"type": "string", "default": "lts"},
 			"port": map[string]any{"type": "integer", "default": 8080},
 			"flag": map[string]any{"type": "boolean", "default": true},
+		}
+	})
+	assert.NoError(t, sch.Validate(doc))
+}
+
+// TestInputEnumMatchesType asserts enum items of the declared type are
+// accepted for string and integer inputs.
+func TestInputEnumMatchesType(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	doc := baseDoc(t, func(d map[string]any) {
+		d["inputs"] = map[string]any{
+			"tag":  map[string]any{"type": "string", "enum": []any{"lts", "stable"}},
+			"port": map[string]any{"type": "integer", "enum": []any{8080, 9090}},
 		}
 	})
 	assert.NoError(t, sch.Validate(doc))

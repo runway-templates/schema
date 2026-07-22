@@ -136,7 +136,8 @@
           "type": "array",
           "minItems": 2,
           "uniqueItems": true,
-          "description": "Restrict the value to one of these options. UI renders as a dropdown. Only valid for type=string or type=integer."
+          "items": { "type": ["string", "integer"] },
+          "description": "Restrict the value to one of these options. Items must match 'type' (enforced). UI renders as a dropdown. Only valid for type=string or type=integer."
         },
         "min": {
           "type": "integer",
@@ -179,14 +180,20 @@
         {
           "if": { "properties": { "type": { "const": "integer" } } },
           "then": {
-            "properties": { "default": { "type": "integer" } },
+            "properties": {
+              "default": { "type": "integer" },
+              "enum": { "items": { "type": "integer" } }
+            },
             "not": { "anyOf": [{ "required": ["pattern"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] }
           }
         },
         {
           "if": { "properties": { "type": { "const": "string" } } },
           "then": {
-            "properties": { "default": { "type": "string" } },
+            "properties": {
+              "default": { "type": "string" },
+              "enum": { "items": { "type": "string" } }
+            },
             "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] }
           }
         }
