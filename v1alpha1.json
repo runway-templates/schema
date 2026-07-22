@@ -422,7 +422,21 @@
           "default": 3
         }
       },
-      "description": "Health check configuration. If omitted, the platform infers a TCP probe against the PORT env var."
+      "allOf": [
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "http" } } },
+          "then": { "required": ["path"], "not": { "required": ["command"] } }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "exec" } } },
+          "then": { "required": ["command"], "not": { "required": ["path"] } }
+        },
+        {
+          "if": { "anyOf": [{ "not": { "required": ["type"] } }, { "properties": { "type": { "const": "tcp" } } }] },
+          "then": { "not": { "anyOf": [{ "required": ["path"] }, { "required": ["command"] }] } }
+        }
+      ],
+      "description": "Health check configuration. If omitted, the platform infers a TCP probe against the PORT env var. type=http requires 'path'; type=exec requires 'command'; tcp allows neither."
     }
   }
 }

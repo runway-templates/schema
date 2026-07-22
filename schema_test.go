@@ -238,6 +238,54 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "http healthcheck requires path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "http",
+				}
+			},
+		},
+		{
+			name: "exec healthcheck requires command",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "exec",
+				}
+			},
+		},
+		{
+			name: "http healthcheck rejects command",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "http", "path": "/healthz", "command": []any{"true"},
+				}
+			},
+		},
+		{
+			name: "exec healthcheck rejects path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "exec", "command": []any{"true"}, "path": "/healthz",
+				}
+			},
+		},
+		{
+			name: "tcp healthcheck rejects path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "tcp", "path": "/healthz",
+				}
+			},
+		},
+		{
+			name: "omitted healthcheck type rejects path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"path": "/healthz",
+				}
+			},
+		},
+		{
 			name: "healthcheck.path must start with /",
 			mutate: func(d map[string]any) {
 				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
@@ -297,6 +345,22 @@ func TestInputEnumMatchesType(t *testing.T) {
 		d["inputs"] = map[string]any{
 			"tag":  map[string]any{"type": "string", "enum": []any{"lts", "stable"}},
 			"port": map[string]any{"type": "integer", "enum": []any{8080, 9090}},
+		}
+	})
+	assert.NoError(t, sch.Validate(doc))
+}
+
+// TestHealthcheckTimingOnly asserts a healthcheck that only tunes timing
+// (type omitted, defaults to tcp) is still accepted.
+func TestHealthcheckTimingOnly(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	doc := baseDoc(t, func(d map[string]any) {
+		d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+			"initialDelaySeconds": 30,
+			"periodSeconds":       15,
 		}
 	})
 	assert.NoError(t, sch.Validate(doc))
