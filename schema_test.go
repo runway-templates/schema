@@ -124,6 +124,18 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "metadata.name rejects trailing hyphen",
+			mutate: func(d map[string]any) {
+				d["metadata"].(map[string]any)["name"] = "demo-"
+			},
+		},
+		{
+			name: "metadata.name rejects single char",
+			mutate: func(d map[string]any) {
+				d["metadata"].(map[string]any)["name"] = "d"
+			},
+		},
+		{
 			name: "metadata.category enum",
 			mutate: func(d map[string]any) {
 				d["metadata"].(map[string]any)["category"] = "frobnicator"

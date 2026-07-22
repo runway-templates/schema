@@ -41,8 +41,8 @@
       "properties": {
         "name": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9-]{1,62}$",
-          "description": "Unique template identifier. Lowercase, hyphen-separated, 2-63 chars."
+          "pattern": "^[a-z][a-z0-9-]{0,61}[a-z0-9]$",
+          "description": "Unique template identifier. Lowercase, hyphen-separated, 2-63 chars. Must not end with a hyphen."
         },
         "version": {
           "type": "string",
