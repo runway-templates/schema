@@ -170,6 +170,36 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "volume mountPath rejects root",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/"}
+			},
+		},
+		{
+			name: "volume mountPath rejects trailing slash",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data/"}
+			},
+		},
+		{
+			name: "volume mountPath rejects empty segment",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data//db"}
+			},
+		},
+		{
+			name: "volume mountPath rejects dot-dot segment",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data/../etc"}
+			},
+		},
+		{
+			name: "volume mountPath rejects dot segment",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data/./db"}
+			},
+		},
+		{
 			name: "boolean input cannot have pattern",
 			mutate: func(d map[string]any) {
 				d["inputs"] = map[string]any{
@@ -376,6 +406,21 @@ func TestHealthcheckTimingOnly(t *testing.T) {
 		}
 	})
 	assert.NoError(t, sch.Validate(doc))
+}
+
+// TestVolumeMountPathAccepted asserts common real-world mount paths pass,
+// including hidden directories like /home/node/.n8n.
+func TestVolumeMountPathAccepted(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	for _, p := range []string{"/data", "/var/lib/mysql", "/home/node/.n8n", "/meili_data"} {
+		doc := baseDoc(t, func(d map[string]any) {
+			d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": p}
+		})
+		assert.NoError(t, sch.Validate(doc), "mountPath %s should be valid", p)
+	}
 }
 
 func TestEnvValueAcceptsBothShapes(t *testing.T) {

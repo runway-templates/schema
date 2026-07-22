@@ -316,8 +316,13 @@
       "properties": {
         "mountPath": {
           "type": "string",
-          "pattern": "^/[^\\s]*$",
-          "description": "Absolute path inside the container where the volume is mounted."
+          "maxLength": 4096,
+          "pattern": "^/[^\\s]*[^/\\s]$",
+          "allOf": [
+            { "not": { "pattern": "//" } },
+            { "not": { "pattern": "/\\.\\.?(/|$)" } }
+          ],
+          "description": "Absolute path inside the container where the volume is mounted. Must not be '/', end with a slash, or contain '.'/'..' segments."
         }
       },
       "description": "Declares that this service requires persistent storage. Size is determined by the user's plan, not the template. Implies the service deploys as a StatefulSet."
