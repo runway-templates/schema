@@ -19,6 +19,8 @@ type Template struct {
 	Services   []Service        `json:"services"`
 }
 
+// Metadata describes a template for the marketplace: identity, version,
+// and upstream links.
 type Metadata struct {
 	Name          string   `json:"name"`
 	Version       string   `json:"version"`
@@ -51,6 +53,8 @@ type Input struct {
 	Category    string `json:"category,omitempty"`
 }
 
+// Service is one deployable unit of a template. Each service becomes its
+// own app on Runway.
 type Service struct {
 	Name        string              `json:"name"`
 	Image       string              `json:"image"`
@@ -86,6 +90,7 @@ type EnvValue struct {
 	Warning     string `json:"warning,omitempty"`
 }
 
+// UnmarshalJSON decodes both the string shorthand and the object form.
 func (e *EnvValue) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
@@ -96,6 +101,7 @@ func (e *EnvValue) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, (*alias)(e))
 }
 
+// MarshalJSON emits the string shorthand when only Value is set.
 func (e EnvValue) MarshalJSON() ([]byte, error) {
 	if e.Description == "" && e.Warning == "" {
 		return json.Marshal(e.Value)
@@ -104,10 +110,12 @@ func (e EnvValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(alias(e))
 }
 
+// Volume declares persistent storage for a service.
 type Volume struct {
 	MountPath string `json:"mountPath"`
 }
 
+// InitContainer runs to completion before the main container starts.
 type InitContainer struct {
 	Name    string              `json:"name"`
 	Image   string              `json:"image,omitempty"`
@@ -116,6 +124,7 @@ type InitContainer struct {
 	Env     map[string]EnvValue `json:"env,omitempty"`
 }
 
+// WorkerContainer is a long-running sidecar in the service's pod.
 type WorkerContainer struct {
 	Name    string              `json:"name"`
 	Image   string              `json:"image,omitempty"`
@@ -124,6 +133,8 @@ type WorkerContainer struct {
 	Env     map[string]EnvValue `json:"env,omitempty"`
 }
 
+// Healthcheck configures the probe that decides when the service is
+// healthy.
 type Healthcheck struct {
 	Type                string   `json:"type,omitempty"`
 	Path                string   `json:"path,omitempty"`
