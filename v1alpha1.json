@@ -294,6 +294,11 @@
           "type": "boolean",
           "default": false,
           "description": "If true, the service's containers run with a read-only filesystem (same as 'runway app lockdown on'). A declared volume stays writable."
+        },
+        "persistence": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, enables persistence for the service. Not every plan supports persistence — declare a minPlan that does; the platform validates the chosen plan before deploy and prompts an upgrade if it is insufficient."
         }
       },
       "description": "Per-service platform settings. Omitted keys use platform defaults."

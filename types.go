@@ -79,6 +79,10 @@ type Settings struct {
 	// Lockdown runs the service with a read-only filesystem. Defaults to
 	// false when nil. Independent of Route.
 	Lockdown *bool `json:"lockdown,omitempty"`
+	// Persistence enables persistence for the service. Defaults to false
+	// when nil. Not every plan supports it — the platform validates the
+	// chosen plan before deploy.
+	Persistence *bool `json:"persistence,omitempty"`
 }
 
 // EnvValue accepts either a bare string ("PORT": "8080") or the full object
