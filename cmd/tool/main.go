@@ -1,3 +1,4 @@
+// Command tool lints and validates Runway template files.
 package main
 
 import (

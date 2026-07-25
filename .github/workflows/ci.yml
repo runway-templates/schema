@@ -27,6 +27,29 @@ jobs:
           persist-credentials: false
       - uses: crate-ci/typos@bee27e3a4fd1ea2111cf90ab89cd076c870fce14 # v1.48.0
 
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          cache: false
+          go-version-file: go.mod
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt'ed:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - run: go vet ./...
+      - uses: docker://morphy/revive-action@sha256:1ec5904abc4d8b2cd5fbb2987fc79a227f21a4231d757cc9a09a9ee3ab3c328b # v2
+
   test:
     runs-on: ubuntu-latest
     permissions:
@@ -42,5 +65,8 @@ jobs:
       - run: go test ./...
       - run: go build -o tool ./cmd/tool/...
       - run: ./tool -h
-      - run: |
-          ./tool lint ./testdata/valid/mariadb.yaml
+      - name: lint template fixtures
+        run: |
+          for f in ./testdata/valid/*.yaml; do
+            ./tool lint "$f"
+          done

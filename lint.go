@@ -12,6 +12,7 @@ import (
 // but the type is exposed so callers can filter or upgrade severities.
 type Severity int
 
+// Severity levels for lint issues.
 const (
 	SeverityWarning Severity = iota
 	SeverityError
