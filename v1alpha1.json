@@ -250,7 +250,7 @@
           "patternProperties": {
             "^[A-Z_][A-Z0-9_]*$": {
               "type": "string",
-              "description": "Value made available to other services as ${{ ServiceName.OUTPUT }}. May reference env vars and platform variables."
+              "description": "Value made available to other services as ${{ services.<name>.outputs.<KEY> }}. May reference ${{ inputs.* }}, ${{ env.* }}, and ${{ runway.* }}. See docs/interpolation/interpolation.md."
             }
           },
           "additionalProperties": false
@@ -311,7 +311,7 @@
           "properties": {
             "value": {
               "type": "string",
-              "description": "The value. May contain ${VAR}, ${{ inputs.X }}, ${{ services.Y.Z }}, ${secret(N)}, and ${RUNWAY_*} interpolations."
+              "description": "The value. May contain ${{ inputs.* }}, ${{ services.<name>.outputs.<KEY> }}, ${{ env.* }}, ${{ runway.* }}, and ${{ runway.secret(N) }} interpolations. See docs/interpolation/interpolation.md."
             },
             "description": {
               "type": "string",

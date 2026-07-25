@@ -51,7 +51,7 @@ services:
       MEILI_ENV: "${{ inputs.environment }}"
       MEILI_NO_ANALYTICS: "true"
       MEILI_MASTER_KEY:
-        value: "${secret(64)}"
+        value: "${{ runway.secret(64) }}"
         warning: |
           Master key. Used to derive all API keys (admin, search, etc.). If
           you lose this key, you will need to re-create all API keys and
@@ -61,10 +61,10 @@ services:
       mountPath: /meili_data
 
     outputs:
-      URL: "http://${RUNWAY_FQDN}:7700"
-      HOST: "${RUNWAY_FQDN}"
+      URL: "http://${{ runway.fqdn }}:7700"
+      HOST: "${{ runway.fqdn }}"
       PORT: "7700"
-      MASTER_KEY: "${MEILI_MASTER_KEY}"
+      MASTER_KEY: "${{ env.MEILI_MASTER_KEY }}"
 
     healthcheck:
       type: http

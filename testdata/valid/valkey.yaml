@@ -48,7 +48,7 @@ services:
     command:
       - valkey-server
       - --requirepass
-      - "${VALKEY_PASSWORD}"
+      - "${{ env.VALKEY_PASSWORD }}"
       - --appendonly
       - "yes"
       - --maxmemory-policy
@@ -59,7 +59,7 @@ services:
     env:
       PORT: "6379"
       VALKEY_PASSWORD:
-        value: "${secret(32)}"
+        value: "${{ runway.secret(32) }}"
         warning: |
           Changing this password requires updating all clients connecting to
           this Valkey instance. Existing clients will fail to authenticate
@@ -69,10 +69,10 @@ services:
       mountPath: /data
 
     outputs:
-      DSN: "redis://default:${VALKEY_PASSWORD}@${RUNWAY_FQDN}:6379"
-      HOST: "${RUNWAY_FQDN}"
+      DSN: "redis://default:${{ env.VALKEY_PASSWORD }}@${{ runway.fqdn }}:6379"
+      HOST: "${{ runway.fqdn }}"
       PORT: "6379"
-      PASSWORD: "${VALKEY_PASSWORD}"
+      PASSWORD: "${{ env.VALKEY_PASSWORD }}"
 
     healthcheck:
       type: tcp

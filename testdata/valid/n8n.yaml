@@ -108,7 +108,7 @@ services:
 
       # --- Encryption ---
       N8N_ENCRYPTION_KEY:
-        value: "${secret(48)}"
+        value: "${{ runway.secret(48) }}"
         warning: |
           n8n uses this key to encrypt all stored credentials (API keys,
           OAuth tokens, etc.). If this key is lost or changed, every
@@ -154,7 +154,7 @@ services:
 
     outputs:
       URL: "${{ inputs.public_url }}"
-      INTERNAL_HOST: "${RUNWAY_FQDN}"
+      INTERNAL_HOST: "${{ runway.fqdn }}"
       INTERNAL_PORT: "5678"
 
     healthcheck:
