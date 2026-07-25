@@ -62,7 +62,19 @@ type Service struct {
 	Workers     []WorkerContainer   `json:"workers,omitempty"`
 	Outputs     map[string]string   `json:"outputs,omitempty"`
 	Healthcheck *Healthcheck        `json:"healthcheck,omitempty"`
+	Settings    *Settings           `json:"settings,omitempty"`
 	MinPlan     string              `json:"minPlan,omitempty"`
+}
+
+// Settings holds per-service platform settings. Pointer fields distinguish
+// "not set" (platform default) from an explicit false/true.
+type Settings struct {
+	// Route controls whether the service gets a public route. Defaults to
+	// true when nil.
+	Route *bool `json:"route,omitempty"`
+	// Lockdown runs the service with a read-only filesystem. Defaults to
+	// false when nil. Independent of Route.
+	Lockdown *bool `json:"lockdown,omitempty"`
 }
 
 // EnvValue accepts either a bare string ("PORT": "8080") or the full object

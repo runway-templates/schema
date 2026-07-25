@@ -256,6 +256,7 @@
           "additionalProperties": false
         },
         "healthcheck": { "$ref": "#/$defs/healthcheck" },
+        "settings": { "$ref": "#/$defs/settings" },
         "minPlan": {
           "type": "string",
           "enum": [
@@ -279,6 +280,23 @@
           "description": "Minimum plan SKU required for this service's app. Values match the platform's plan SKU (e.g. 'start-m-launch'). The platform validates the user's plan before deploy and prompts an upgrade if insufficient."
         }
       }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "route": {
+          "type": "boolean",
+          "default": true,
+          "description": "If false, the service gets no public route and is only reachable inside the cluster via ${{ runway.fqdn }}. ${{ runway.url }} is invalid in unrouted services."
+        },
+        "lockdown": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the service's containers run with a read-only filesystem (same as 'runway app lockdown on'). A declared volume stays writable."
+        }
+      },
+      "description": "Per-service platform settings. Omitted keys use platform defaults."
     },
     "envValue": {
       "oneOf": [

@@ -77,4 +77,7 @@ services:
     healthcheck:
       type: tcp
 
+    settings:
+      route: false
+
     minPlan: free-launch
