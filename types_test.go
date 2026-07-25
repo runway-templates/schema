@@ -39,7 +39,7 @@ func TestDecodeFile_n8n(t *testing.T) {
 	// Object env preserves the warning field.
 	require.Contains(t, svc.Env, "N8N_ENCRYPTION_KEY")
 	enc := svc.Env["N8N_ENCRYPTION_KEY"]
-	assert.Equal(t, "${secret(48)}", enc.Value)
+	assert.Equal(t, "${{ runway.secret(48) }}", enc.Value)
 	assert.Contains(t, enc.Warning, "credentials")
 
 	require.NotNil(t, svc.Volume)

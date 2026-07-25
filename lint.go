@@ -45,14 +45,16 @@ var licenseAllowList = map[string]struct{}{
 }
 
 // Lint runs semantic checks against a decoded Template that the JSON Schema
-// cannot express. Currently this is SPDX license validation. It returns all
-// issues found; an empty slice means clean. Callers decide whether to treat
-// warnings as fatal.
+// cannot express: interpolation reference checks (errors, see
+// docs/interpolation/interpolation.md) plus SPDX license and minPlan checks (warnings).
+// It returns all issues found; an empty slice means clean. Callers decide
+// whether to treat warnings as fatal — errors always are.
 func Lint(t *Template) []Issue {
 	if t == nil {
 		return nil
 	}
 	var issues []Issue
+	issues = append(issues, lintRefs(t)...)
 	issues = append(issues, lintLicense(t)...)
 	issues = append(issues, lintMinPlan(t)...)
 	return issues

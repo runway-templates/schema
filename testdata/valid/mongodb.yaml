@@ -56,7 +56,7 @@ services:
       PORT: "27017"
       MONGO_INITDB_ROOT_USERNAME: "${{ inputs.username }}"
       MONGO_INITDB_ROOT_PASSWORD:
-        value: "${secret(32)}"
+        value: "${{ runway.secret(32) }}"
         warning: |
           Root password. Set on first start only; changing this value here
           does NOT update the password inside MongoDB. Use db.changeUserPassword()
@@ -67,12 +67,12 @@ services:
       mountPath: /data/db
 
     outputs:
-      DSN: "mongodb://${{ inputs.username }}:${MONGO_INITDB_ROOT_PASSWORD}@${RUNWAY_FQDN}:27017/${{ inputs.database_name }}?authSource=admin"
-      HOST: "${RUNWAY_FQDN}"
+      DSN: "mongodb://${{ inputs.username }}:${{ env.MONGO_INITDB_ROOT_PASSWORD }}@${{ runway.fqdn }}:27017/${{ inputs.database_name }}?authSource=admin"
+      HOST: "${{ runway.fqdn }}"
       PORT: "27017"
       DATABASE: "${{ inputs.database_name }}"
       USERNAME: "${{ inputs.username }}"
-      PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
+      PASSWORD: "${{ env.MONGO_INITDB_ROOT_PASSWORD }}"
 
     healthcheck:
       type: exec

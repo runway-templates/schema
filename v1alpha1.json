@@ -250,12 +250,13 @@
           "patternProperties": {
             "^[A-Z_][A-Z0-9_]*$": {
               "type": "string",
-              "description": "Value made available to other services as ${{ ServiceName.OUTPUT }}. May reference env vars and platform variables."
+              "description": "Value made available to other services as ${{ services.<name>.outputs.<KEY> }}. May reference ${{ inputs.* }}, ${{ env.* }}, and ${{ runway.* }}. See docs/interpolation/interpolation.md."
             }
           },
           "additionalProperties": false
         },
         "healthcheck": { "$ref": "#/$defs/healthcheck" },
+        "settings": { "$ref": "#/$defs/settings" },
         "minPlan": {
           "type": "string",
           "enum": [
@@ -280,6 +281,23 @@
         }
       }
     },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "route": {
+          "type": "boolean",
+          "default": true,
+          "description": "If false, the service gets no public route and is only reachable inside the cluster via ${{ runway.fqdn }}. ${{ runway.url }} is invalid in unrouted services."
+        },
+        "lockdown": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the service's containers run with a read-only filesystem (same as 'runway app lockdown on'). A declared volume stays writable."
+        }
+      },
+      "description": "Per-service platform settings. Omitted keys use platform defaults."
+    },
     "envValue": {
       "oneOf": [
         {
@@ -293,7 +311,7 @@
           "properties": {
             "value": {
               "type": "string",
-              "description": "The value. May contain ${VAR}, ${{ inputs.X }}, ${{ services.Y.Z }}, ${secret(N)}, and ${RUNWAY_*} interpolations."
+              "description": "The value. May contain ${{ inputs.* }}, ${{ services.<name>.outputs.<KEY> }}, ${{ env.* }}, ${{ runway.* }}, and ${{ runway.secret(N) }} interpolations. See docs/interpolation/interpolation.md."
             },
             "description": {
               "type": "string",

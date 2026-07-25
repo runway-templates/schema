@@ -50,14 +50,14 @@ services:
       MARIADB_DATABASE: "${{ inputs.database_name }}"
       MARIADB_USER: "${{ inputs.username }}"
       MARIADB_PASSWORD:
-        value: "${secret(32)}"
+        value: "${{ runway.secret(32) }}"
         warning: |
           Changing this password requires updating all clients. The password
           is also baked into the database on first start; changing it here
           does NOT update it inside MariaDB. Use 'ALTER USER' over a SQL
           connection to actually rotate.
       MARIADB_ROOT_PASSWORD:
-        value: "${secret(40)}"
+        value: "${{ runway.secret(40) }}"
         warning: |
           Root password. Changing this here does NOT update the password
           inside MariaDB; use 'ALTER USER' over a SQL connection.
@@ -66,13 +66,13 @@ services:
       mountPath: /var/lib/mysql
 
     outputs:
-      DSN: "mysql://${{ inputs.username }}:${MARIADB_PASSWORD}@${RUNWAY_FQDN}:3306/${{ inputs.database_name }}"
-      HOST: "${RUNWAY_FQDN}"
+      DSN: "mysql://${{ inputs.username }}:${{ env.MARIADB_PASSWORD }}@${{ runway.fqdn }}:3306/${{ inputs.database_name }}"
+      HOST: "${{ runway.fqdn }}"
       PORT: "3306"
       DATABASE: "${{ inputs.database_name }}"
       USERNAME: "${{ inputs.username }}"
-      PASSWORD: "${MARIADB_PASSWORD}"
-      ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+      PASSWORD: "${{ env.MARIADB_PASSWORD }}"
+      ROOT_PASSWORD: "${{ env.MARIADB_ROOT_PASSWORD }}"
 
     healthcheck:
       type: exec
