@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=../../v1alpha1.json
-# violation: settings only allows the declared keys (route, lockdown, persistence).
+# violation: settings.persistence must be a boolean.
 apiVersion: schema.runway.horse/templates/v1alpha1
 kind: Template
 
@@ -14,5 +14,4 @@ services:
   - name: web
     image: nginx:1.27
     settings:
-      route: false
-      replicas: 3
+      persistence: "yes"
