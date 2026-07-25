@@ -124,6 +124,18 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "metadata.name rejects trailing hyphen",
+			mutate: func(d map[string]any) {
+				d["metadata"].(map[string]any)["name"] = "demo-"
+			},
+		},
+		{
+			name: "metadata.name rejects single char",
+			mutate: func(d map[string]any) {
+				d["metadata"].(map[string]any)["name"] = "d"
+			},
+		},
+		{
 			name: "metadata.category enum",
 			mutate: func(d map[string]any) {
 				d["metadata"].(map[string]any)["category"] = "frobnicator"
@@ -158,6 +170,36 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "volume mountPath rejects root",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/"}
+			},
+		},
+		{
+			name: "volume mountPath rejects trailing slash",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data/"}
+			},
+		},
+		{
+			name: "volume mountPath rejects empty segment",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data//db"}
+			},
+		},
+		{
+			name: "volume mountPath rejects dot-dot segment",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data/../etc"}
+			},
+		},
+		{
+			name: "volume mountPath rejects dot segment",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": "/data/./db"}
+			},
+		},
+		{
 			name: "boolean input cannot have pattern",
 			mutate: func(d map[string]any) {
 				d["inputs"] = map[string]any{
@@ -182,10 +224,106 @@ func TestSchemaRules(t *testing.T) {
 			},
 		},
 		{
+			name: "string input rejects integer default",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"tag": map[string]any{"type": "string", "default": 8080},
+				}
+			},
+		},
+		{
+			name: "integer input rejects string default",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"port": map[string]any{"type": "integer", "default": "8080"},
+				}
+			},
+		},
+		{
+			name: "boolean input rejects string default",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"flag": map[string]any{"type": "boolean", "default": "true"},
+				}
+			},
+		},
+		{
+			name: "string input rejects integer enum items",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"mode": map[string]any{"type": "string", "enum": []any{"fast", 2}},
+				}
+			},
+		},
+		{
+			name: "integer input rejects string enum items",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"port": map[string]any{"type": "integer", "enum": []any{80, "8080"}},
+				}
+			},
+		},
+		{
+			name: "enum items cannot be booleans or objects",
+			mutate: func(d map[string]any) {
+				d["inputs"] = map[string]any{
+					"mode": map[string]any{"type": "string", "enum": []any{true, map[string]any{}}},
+				}
+			},
+		},
+		{
 			name: "input.enum requires at least 2 entries",
 			mutate: func(d map[string]any) {
 				d["inputs"] = map[string]any{
 					"mode": map[string]any{"type": "string", "enum": []any{"only-one"}},
+				}
+			},
+		},
+		{
+			name: "http healthcheck requires path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "http",
+				}
+			},
+		},
+		{
+			name: "exec healthcheck requires command",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "exec",
+				}
+			},
+		},
+		{
+			name: "http healthcheck rejects command",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "http", "path": "/healthz", "command": []any{"true"},
+				}
+			},
+		},
+		{
+			name: "exec healthcheck rejects path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "exec", "command": []any{"true"}, "path": "/healthz",
+				}
+			},
+		},
+		{
+			name: "tcp healthcheck rejects path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"type": "tcp", "path": "/healthz",
+				}
+			},
+		},
+		{
+			name: "omitted healthcheck type rejects path",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+					"path": "/healthz",
 				}
 			},
 		},
@@ -218,6 +356,70 @@ func TestSchemaRules(t *testing.T) {
 			err := sch.Validate(baseDoc(t, tc.mutate))
 			assert.Error(t, err, "expected validation error")
 		})
+	}
+}
+
+// TestInputDefaultMatchesType asserts a default of the declared type is
+// accepted for each input type.
+func TestInputDefaultMatchesType(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	doc := baseDoc(t, func(d map[string]any) {
+		d["inputs"] = map[string]any{
+			"tag":  map[string]any{"type": "string", "default": "lts"},
+			"port": map[string]any{"type": "integer", "default": 8080},
+			"flag": map[string]any{"type": "boolean", "default": true},
+		}
+	})
+	assert.NoError(t, sch.Validate(doc))
+}
+
+// TestInputEnumMatchesType asserts enum items of the declared type are
+// accepted for string and integer inputs.
+func TestInputEnumMatchesType(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	doc := baseDoc(t, func(d map[string]any) {
+		d["inputs"] = map[string]any{
+			"tag":  map[string]any{"type": "string", "enum": []any{"lts", "stable"}},
+			"port": map[string]any{"type": "integer", "enum": []any{8080, 9090}},
+		}
+	})
+	assert.NoError(t, sch.Validate(doc))
+}
+
+// TestHealthcheckTimingOnly asserts a healthcheck that only tunes timing
+// (type omitted, defaults to tcp) is still accepted.
+func TestHealthcheckTimingOnly(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	doc := baseDoc(t, func(d map[string]any) {
+		d["services"].([]any)[0].(map[string]any)["healthcheck"] = map[string]any{
+			"initialDelaySeconds": 30,
+			"periodSeconds":       15,
+		}
+	})
+	assert.NoError(t, sch.Validate(doc))
+}
+
+// TestVolumeMountPathAccepted asserts common real-world mount paths pass,
+// including hidden directories like /home/node/.n8n.
+func TestVolumeMountPathAccepted(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	for _, p := range []string{"/data", "/var/lib/mysql", "/home/node/.n8n", "/meili_data"} {
+		doc := baseDoc(t, func(d map[string]any) {
+			d["services"].([]any)[0].(map[string]any)["volume"] = map[string]any{"mountPath": p}
+		})
+		assert.NoError(t, sch.Validate(doc), "mountPath %s should be valid", p)
 	}
 }
 

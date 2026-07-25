@@ -101,4 +101,3 @@ func lintLicense(t *Template) []Issue {
 		Severity: SeverityWarning,
 	}}
 }
-

@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../v1alpha1.json
+# violation: healthcheck type=http requires 'path'.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: other
+
+services:
+  - name: web
+    image: nginx:1.27
+    healthcheck:
+      type: http
+      initialDelaySeconds: 10

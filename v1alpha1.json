@@ -41,8 +41,8 @@
       "properties": {
         "name": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9-]{1,62}$",
-          "description": "Unique template identifier. Lowercase, hyphen-separated, 2-63 chars."
+          "pattern": "^[a-z][a-z0-9-]{0,61}[a-z0-9]$",
+          "description": "Unique template identifier. Lowercase, hyphen-separated, 2-63 chars. Must not end with a hyphen."
         },
         "version": {
           "type": "string",
@@ -119,7 +119,8 @@
           "description": "Help text shown next to the input field in the deploy UI."
         },
         "default": {
-          "description": "Default value. Type must match 'type'. Presence implies 'required: false' unless overridden."
+          "type": ["string", "integer", "boolean"],
+          "description": "Default value. Must match 'type' (enforced). Presence implies 'required: false' unless overridden."
         },
         "required": {
           "type": "boolean",
@@ -135,7 +136,8 @@
           "type": "array",
           "minItems": 2,
           "uniqueItems": true,
-          "description": "Restrict the value to one of these options. UI renders as a dropdown. Only valid for type=string or type=integer."
+          "items": { "type": ["string", "integer"] },
+          "description": "Restrict the value to one of these options. Items must match 'type' (enforced). UI renders as a dropdown. Only valid for type=string or type=integer."
         },
         "min": {
           "type": "integer",
@@ -170,15 +172,30 @@
       "allOf": [
         {
           "if": { "properties": { "type": { "const": "boolean" } } },
-          "then": { "not": { "anyOf": [{ "required": ["enum"] }, { "required": ["pattern"] }, { "required": ["min"] }, { "required": ["max"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] } }
+          "then": {
+            "properties": { "default": { "type": "boolean" } },
+            "not": { "anyOf": [{ "required": ["enum"] }, { "required": ["pattern"] }, { "required": ["min"] }, { "required": ["max"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] }
+          }
         },
         {
           "if": { "properties": { "type": { "const": "integer" } } },
-          "then": { "not": { "anyOf": [{ "required": ["pattern"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] } }
+          "then": {
+            "properties": {
+              "default": { "type": "integer" },
+              "enum": { "items": { "type": "integer" } }
+            },
+            "not": { "anyOf": [{ "required": ["pattern"] }, { "required": ["minLength"] }, { "required": ["maxLength"] }] }
+          }
         },
         {
           "if": { "properties": { "type": { "const": "string" } } },
-          "then": { "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] } }
+          "then": {
+            "properties": {
+              "default": { "type": "string" },
+              "enum": { "items": { "type": "string" } }
+            },
+            "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] }
+          }
         }
       ]
     },
@@ -299,8 +316,13 @@
       "properties": {
         "mountPath": {
           "type": "string",
-          "pattern": "^/[^\\s]*$",
-          "description": "Absolute path inside the container where the volume is mounted."
+          "maxLength": 4096,
+          "pattern": "^/[^\\s]*[^/\\s]$",
+          "allOf": [
+            { "not": { "pattern": "//" } },
+            { "not": { "pattern": "/\\.\\.?(/|$)" } }
+          ],
+          "description": "Absolute path inside the container where the volume is mounted. Must not be '/', end with a slash, or contain '.'/'..' segments."
         }
       },
       "description": "Declares that this service requires persistent storage. Size is determined by the user's plan, not the template. Implies the service deploys as a StatefulSet."
@@ -405,7 +427,21 @@
           "default": 3
         }
       },
-      "description": "Health check configuration. If omitted, the platform infers a TCP probe against the PORT env var."
+      "allOf": [
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "http" } } },
+          "then": { "required": ["path"], "not": { "required": ["command"] } }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "exec" } } },
+          "then": { "required": ["command"], "not": { "required": ["path"] } }
+        },
+        {
+          "if": { "anyOf": [{ "not": { "required": ["type"] } }, { "properties": { "type": { "const": "tcp" } } }] },
+          "then": { "not": { "anyOf": [{ "required": ["path"] }, { "required": ["command"] }] } }
+        }
+      ],
+      "description": "Health check configuration. If omitted, the platform infers a TCP probe against the PORT env var. type=http requires 'path'; type=exec requires 'command'; tcp allows neither."
     }
   }
 }
