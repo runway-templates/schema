@@ -20,14 +20,6 @@ func refErrors(t *schema.Template) []schema.Issue {
 	return out
 }
 
-func errorPaths(t *schema.Template) []string {
-	var out []string
-	for _, is := range refErrors(t) {
-		out = append(out, is.Path)
-	}
-	return out
-}
-
 // Every checked-in template must be free of reference errors.
 func TestLintRefs_ValidFixturesClean(t *testing.T) {
 	t.Parallel()
@@ -85,6 +77,7 @@ func TestLintRefs_CrossServiceOutput(t *testing.T) {
 		Name:  "app",
 		Image: "nginx:1.27",
 		Env: map[string]schema.EnvValue{
+			"PORT":      {Value: "8080"},
 			"REDIS_DSN": {Value: "${{ services.valkey.outputs.DSN }}"},
 		},
 	})
@@ -106,7 +99,7 @@ func TestLintRefs_OutputRefErrors(t *testing.T) {
 			tmpl.Services = append(tmpl.Services, schema.Service{
 				Name:  "app",
 				Image: "nginx:1.27",
-				Env:   map[string]schema.EnvValue{"REF": {Value: tc.value}},
+				Env:   map[string]schema.EnvValue{"PORT": {Value: "8080"}, "REF": {Value: tc.value}},
 			})
 			issues := refErrors(tmpl)
 			require.Len(t, issues, 1)
@@ -132,7 +125,7 @@ func TestLintRefs_CyclicOutputs(t *testing.T) {
 	tmpl.Services = append(tmpl.Services, schema.Service{
 		Name:    "app",
 		Image:   "nginx:1.27",
-		Env:     map[string]schema.EnvValue{"REDIS_DSN": {Value: "${{ services.valkey.outputs.DSN }}"}},
+		Env:     map[string]schema.EnvValue{"PORT": {Value: "8080"}, "REDIS_DSN": {Value: "${{ services.valkey.outputs.DSN }}"}},
 		Outputs: map[string]string{"URL": "http://app"},
 	})
 	issues := refErrors(tmpl)

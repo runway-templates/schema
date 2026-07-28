@@ -16,6 +16,16 @@ func issuePaths(issues []schema.Issue) []string {
 	return out
 }
 
+func findIssue(t *testing.T, issues []schema.Issue, path string) *schema.Issue {
+	t.Helper()
+	for i := range issues {
+		if issues[i].Path == path {
+			return &issues[i]
+		}
+	}
+	return nil
+}
+
 // Fixtures with valid SPDX identifiers must produce no metadata.license
 // warning. Covers the bare-ID lookup path of go-spdx.
 func TestLint_ValidSPDXLicenses(t *testing.T) {
@@ -111,4 +121,42 @@ func TestLint_MinPlanDeclared(t *testing.T) {
 			assert.NotContains(t, issuePaths(schema.Lint(loadFixture(t, f))), "services[0].minPlan")
 		})
 	}
+}
+
+// PORT is required for routable services and http healthchecks; an
+// unrouted service without an http check may go without.
+func TestLint_Port(t *testing.T) {
+	t.Parallel()
+
+	routeOff := false
+
+	t.Run("routable without PORT errors", func(t *testing.T) {
+		t.Parallel()
+		tmpl := loadFixture(t, "valkey.yaml")
+		delete(tmpl.Services[0].Env, "PORT")
+		tmpl.Services[0].Settings = nil // route defaults to true
+		got := findIssue(t, schema.Lint(tmpl), "services[0].env.PORT")
+		require.NotNil(t, got)
+		assert.Equal(t, schema.SeverityError, got.Severity)
+	})
+
+	t.Run("unrouted without PORT is fine", func(t *testing.T) {
+		t.Parallel()
+		tmpl := loadFixture(t, "valkey.yaml")
+		delete(tmpl.Services[0].Env, "PORT")
+		tmpl.Services[0].Settings = &schema.Settings{Route: &routeOff}
+		tmpl.Services[0].Healthcheck = nil
+		assert.NotContains(t, issuePaths(schema.Lint(tmpl)), "services[0].env.PORT")
+	})
+
+	t.Run("http healthcheck without PORT errors", func(t *testing.T) {
+		t.Parallel()
+		tmpl := loadFixture(t, "valkey.yaml")
+		delete(tmpl.Services[0].Env, "PORT")
+		tmpl.Services[0].Settings = &schema.Settings{Route: &routeOff}
+		tmpl.Services[0].Healthcheck = &schema.Healthcheck{Type: "http", Path: "/healthz"}
+		got := findIssue(t, schema.Lint(tmpl), "services[0].env.PORT")
+		require.NotNil(t, got)
+		assert.Equal(t, schema.SeverityError, got.Severity)
+	})
 }

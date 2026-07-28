@@ -58,6 +58,7 @@ func Lint(t *Template) []Issue {
 	issues = append(issues, lintRefs(t)...)
 	issues = append(issues, lintLicense(t)...)
 	issues = append(issues, lintMinPlan(t)...)
+	issues = append(issues, lintPort(t)...)
 	return issues
 }
 
@@ -70,6 +71,39 @@ func LintFile(path string) ([]Issue, error) {
 		return nil, err
 	}
 	return Lint(t), nil
+}
+
+// lintPort enforces when a service must declare env.PORT: a routable
+// service needs it for its public route, and an http healthcheck has
+// nothing to probe without it.
+//
+// An unrouted service without an http healthcheck may omit it — inside
+// the cluster, clients reach the app directly and Runway skips the
+// default TCP probe.
+func lintPort(t *Template) []Issue {
+	var issues []Issue
+	for i, s := range t.Services {
+		if _, ok := s.Env["PORT"]; ok {
+			continue
+		}
+		path := fmt.Sprintf("services[%d].env.PORT", i)
+		if s.Settings == nil || s.Settings.Route == nil || *s.Settings.Route {
+			issues = append(issues, Issue{
+				Path:     path,
+				Message:  "a routable service must declare env.PORT (or set settings.route: false)",
+				Severity: SeverityError,
+			})
+			continue
+		}
+		if s.Healthcheck != nil && s.Healthcheck.Type == "http" {
+			issues = append(issues, Issue{
+				Path:     path,
+				Message:  "an http healthcheck needs env.PORT",
+				Severity: SeverityError,
+			})
+		}
+	}
+	return issues
 }
 
 func lintMinPlan(t *Template) []Issue {
