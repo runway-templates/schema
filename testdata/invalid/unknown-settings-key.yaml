@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=../../v1alpha1.json
-# violation: settings only allows the declared keys (route, lockdown, persistence).
+# violation: settings only allows the declared keys (route, lockdown).
 apiVersion: schema.runway.horse/templates/v1alpha1
 kind: Template
 

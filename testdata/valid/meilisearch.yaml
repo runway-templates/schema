@@ -72,7 +72,4 @@ services:
       initialDelaySeconds: 10
       periodSeconds: 10
 
-    settings:
-      persistence: true
-
     minPlan: scale-m-launch
