@@ -3,7 +3,7 @@ module github.com/runway-templates/schema
 go 1.26.1
 
 require (
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/stretchr/testify v1.11.1
 	sigs.k8s.io/yaml v1.6.0
 )
