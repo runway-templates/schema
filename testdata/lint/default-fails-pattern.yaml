@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../v1alpha1.json
+# The default does not match the input's own pattern.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: default-fails-pattern
+  version: 1.0.0
+  displayName: Default fails pattern
+  description: Input default that its own pattern rejects.
+  category: other
+
+inputs:
+  database_name:
+    type: string
+    default: "9lives"
+    pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+
+services:
+  - name: app
+    image: example.com/app:1
+    env:
+      PORT: "8080"
+      DB: "${{ inputs.database_name }}"
+    minPlan: free-launch

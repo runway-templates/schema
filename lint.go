@@ -2,6 +2,8 @@ package schema
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/github/go-spdx/v2/spdxexp"
@@ -59,6 +61,27 @@ func Lint(t *Template) []Issue {
 	issues = append(issues, lintLicense(t)...)
 	issues = append(issues, lintMinPlan(t)...)
 	issues = append(issues, lintPort(t)...)
+	issues = append(issues, lintDefaults(t)...)
+	return issues
+}
+
+// lintDefaults checks each input's default against that input's own
+// constraints. A bad default only surfaces at deploy time, for the user who
+// accepts it.
+//
+// Inputs without a default are skipped: a required input with no default is
+// how an author asks the user for a value.
+func lintDefaults(t *Template) []Issue {
+	var issues []Issue
+	for _, name := range slices.Sorted(maps.Keys(t.Inputs)) {
+		in := t.Inputs[name]
+		if in.Default == nil {
+			continue
+		}
+		one := &Template{Inputs: map[string]Input{name: in}}
+		_, found := ValidateInputs(one, nil)
+		issues = append(issues, found...)
+	}
 	return issues
 }
 

@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../v1alpha1.json
+# The default is not one of the enum options. Schema-valid, deploy-broken:
+# a user who accepts the defaults gets rejected.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: default-not-in-enum
+  version: 1.0.0
+  displayName: Default not in enum
+  description: Input default that its own enum does not allow.
+  category: other
+
+inputs:
+  image_tag:
+    type: string
+    default: "9.2"
+    enum: ["9.1", "8.1"]
+
+services:
+  - name: app
+    image: "example.com/app:${{ inputs.image_tag }}"
+    env:
+      PORT: "8080"
+    minPlan: free-launch

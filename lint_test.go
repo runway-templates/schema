@@ -160,3 +160,70 @@ func TestLint_Port(t *testing.T) {
 		assert.Equal(t, schema.SeverityError, got.Severity)
 	})
 }
+
+// An input default must satisfy that input's own constraints. These are
+// schema-valid documents, so only Lint can catch them — and the user who
+// accepts the defaults is the one who hits the error.
+func TestLint_Defaults(t *testing.T) {
+	t.Parallel()
+
+	t.Run("default outside enum errors", func(t *testing.T) {
+		t.Parallel()
+		require.NoError(t, schema.ValidateFile(lintFixture("default-not-in-enum.yaml")))
+
+		issues, err := schema.LintFile(lintFixture("default-not-in-enum.yaml"))
+		require.NoError(t, err)
+		got := findIssue(t, issues, "inputs.image_tag")
+		require.NotNil(t, got)
+		assert.Equal(t, schema.SeverityError, got.Severity)
+		assert.Contains(t, got.Message, "must be one of")
+	})
+
+	t.Run("default failing pattern errors", func(t *testing.T) {
+		t.Parallel()
+		require.NoError(t, schema.ValidateFile(lintFixture("default-fails-pattern.yaml")))
+
+		issues, err := schema.LintFile(lintFixture("default-fails-pattern.yaml"))
+		require.NoError(t, err)
+		got := findIssue(t, issues, "inputs.database_name")
+		require.NotNil(t, got)
+		assert.Equal(t, schema.SeverityError, got.Severity)
+		assert.Contains(t, got.Message, "must match pattern")
+	})
+
+	t.Run("integer default out of range errors", func(t *testing.T) {
+		t.Parallel()
+		max := 65535
+		tmpl := loadFixture(t, "valkey.yaml")
+		tmpl.Inputs = map[string]schema.Input{
+			"port": {Type: "integer", Default: 70000, Max: &max},
+		}
+		got := findIssue(t, schema.Lint(tmpl), "inputs.port")
+		require.NotNil(t, got)
+		assert.Equal(t, schema.SeverityError, got.Severity)
+	})
+
+	// A required input with no default is how an author asks the user for a
+	// value. Lint must not treat the absent default as a mistake.
+	t.Run("required without default is clean", func(t *testing.T) {
+		t.Parallel()
+		tmpl := loadFixture(t, "valkey.yaml")
+		tmpl.Inputs = map[string]schema.Input{
+			"public_url": {Type: "string", Required: true},
+		}
+		assert.NotContains(t, issuePaths(schema.Lint(tmpl)), "inputs.public_url")
+	})
+
+	// Every shipped fixture must have defaults that actually work.
+	t.Run("fixtures have valid defaults", func(t *testing.T) {
+		t.Parallel()
+		for _, f := range yamlFiles(t, validFixturesDir) {
+			t.Run(f, func(t *testing.T) {
+				t.Parallel()
+				for _, is := range schema.Lint(loadFixture(t, f)) {
+					assert.NotContains(t, is.Path, "inputs.", "bad default: %s", is)
+				}
+			})
+		}
+	})
+}
