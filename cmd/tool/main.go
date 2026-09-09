@@ -76,12 +76,14 @@ func main() {
 						return err
 					}
 
+					var lintErrors int
 					if len(issues) > 0 {
 						o.Printf("Found issues: %d\n", len(issues))
 						for _, issue := range issues {
 							icon := "⚠️ "
 							if issue.Severity == schema.SeverityError {
 								icon = "❌"
+								lintErrors++
 							}
 							o.Printf("%s %s: %s\n", icon, issue.Path, issue.Message)
 						}
@@ -89,7 +91,15 @@ func main() {
 						o.Println("✅ no linting issues")
 					}
 
-					return validateErr
+					if validateErr != nil {
+						return validateErr
+					}
+					// Warnings are advisory; only errors fail the command, so
+					// CI can gate on the exit code.
+					if lintErrors > 0 {
+						return fmt.Errorf("%d lint error(s) in %s", lintErrors, path)
+					}
+					return nil
 				},
 			},
 			{

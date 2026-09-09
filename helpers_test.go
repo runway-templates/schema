@@ -11,10 +11,15 @@ import (
 const (
 	validFixturesDir   = "testdata/valid"
 	invalidFixturesDir = "testdata/invalid"
+	// lintFixturesDir holds templates the JSON Schema accepts but Lint
+	// rejects. They must stay out of testdata/invalid, which asserts every
+	// file there fails validation.
+	lintFixturesDir = "testdata/lint"
 )
 
 func validFixture(name string) string   { return filepath.Join(validFixturesDir, name) }
 func invalidFixture(name string) string { return filepath.Join(invalidFixturesDir, name) }
+func lintFixture(name string) string    { return filepath.Join(lintFixturesDir, name) }
 
 // loadFixture decodes a template under testdata/valid into the typed model.
 // Use this whenever a test needs a *Template; for tests that need the raw

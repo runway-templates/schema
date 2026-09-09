@@ -1,0 +1,27 @@
+name: setup runway-templates tool
+description: Install Go and the runway-templates schema lint/validate tool.
+
+inputs:
+  version:
+    description: Module version to install.
+    required: false
+    default: latest
+  go-version:
+    description: Go toolchain version passed to actions/setup-go.
+    required: false
+    default: stable
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        cache: false
+        go-version: ${{ inputs.go-version }}
+    - name: install tool
+      shell: bash
+      env:
+        TOOL_VERSION: ${{ inputs.version }}
+      run: |
+        go install "github.com/runway-templates/schema/cmd/tool@${TOOL_VERSION}"
+        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
