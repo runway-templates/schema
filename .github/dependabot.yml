@@ -12,7 +12,9 @@ updates:
       default-days: 7
 
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/setup-tool
     schedule:
       interval: weekly
     groups:

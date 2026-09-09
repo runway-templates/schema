@@ -21,6 +21,8 @@ jobs:
   spelling:
     name: Spell Check with Typos
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -69,4 +71,20 @@ jobs:
         run: |
           for f in ./testdata/valid/*.yaml; do
             ./tool lint "$f"
+          done
+
+  action:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-tool
+      - run: tool -h
+      - name: lint template fixtures
+        run: |
+          for f in ./testdata/valid/*.yaml; do
+            tool lint "$f"
           done
