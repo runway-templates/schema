@@ -62,6 +62,7 @@ type Service struct {
 	Args        []string            `json:"args,omitempty"`
 	Env         map[string]EnvValue `json:"env,omitempty"`
 	Volume      *Volume             `json:"volume,omitempty"`
+	RunAs       *RunAs              `json:"runAs,omitempty"`
 	Init        []InitContainer     `json:"init,omitempty"`
 	Workers     []WorkerContainer   `json:"workers,omitempty"`
 	Outputs     map[string]string   `json:"outputs,omitempty"`
@@ -113,6 +114,13 @@ func (e EnvValue) MarshalJSON() ([]byte, error) {
 // Volume declares persistent storage for a service.
 type Volume struct {
 	MountPath string `json:"mountPath"`
+}
+
+// RunAs sets the user and group for all containers of a service. Group
+// also owns the volume.
+type RunAs struct {
+	User  int64 `json:"user"`
+	Group int64 `json:"group"`
 }
 
 // InitContainer runs to completion before the main container starts.

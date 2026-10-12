@@ -50,6 +50,21 @@ func TestDecodeFile_n8n(t *testing.T) {
 	assert.Equal(t, "http", svc.Healthcheck.Type)
 }
 
+func TestDecodeFile_valkeyRunAs(t *testing.T) {
+	t.Parallel()
+	tmpl := loadFixture(t, "valkey.yaml")
+
+	require.NotNil(t, tmpl.Services[0].RunAs)
+	assert.Equal(t, schema.RunAs{User: 999, Group: 1000}, *tmpl.Services[0].RunAs)
+}
+
+func TestDecodeFile_n8nNoRunAs(t *testing.T) {
+	t.Parallel()
+	tmpl := loadFixture(t, "n8n.yaml")
+
+	assert.Nil(t, tmpl.Services[0].RunAs)
+}
+
 func TestDecode_EnvValueShapes(t *testing.T) {
 	t.Parallel()
 	raw := []byte(`{
