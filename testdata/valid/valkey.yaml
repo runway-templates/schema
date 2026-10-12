@@ -68,6 +68,11 @@ services:
     volume:
       mountPath: /data
 
+    # the official image starts as root and drops to valkey in its entrypoint
+    runAs:
+      user: 999
+      group: 1000
+
     outputs:
       DSN: "redis://default:${{ env.VALKEY_PASSWORD }}@${{ runway.fqdn }}:6379"
       HOST: "${{ runway.fqdn }}"

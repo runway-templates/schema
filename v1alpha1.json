@@ -233,6 +233,7 @@
           "description": "Environment variables for the main container. Keys must be valid env var identifiers (uppercase, underscores). Init containers and workers inherit these by default."
         },
         "volume": { "$ref": "#/$defs/volume" },
+        "runAs": { "$ref": "#/$defs/runAs" },
         "init": {
           "type": "array",
           "maxItems": 5,
@@ -326,6 +327,26 @@
           }
         }
       ]
+    },
+    "runAs": {
+      "type": "object",
+      "required": ["user", "group"],
+      "additionalProperties": false,
+      "properties": {
+        "user": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "UID all containers of the service run as. Root (0) is not allowed."
+        },
+        "group": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "GID all containers of the service run as. The volume is owned by this group, so the service can write to it."
+        }
+      },
+      "description": "User and group for images that start as root and drop privileges in their entrypoint. Omit it for images that already run as a non-root USER."
     },
     "volume": {
       "type": "object",

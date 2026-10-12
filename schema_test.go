@@ -348,6 +348,30 @@ func TestSchemaRules(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "runAs rejects root user",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["runAs"] = map[string]any{"user": 0, "group": 1000}
+			},
+		},
+		{
+			name: "runAs rejects root group",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["runAs"] = map[string]any{"user": 999, "group": 0}
+			},
+		},
+		{
+			name: "runAs requires group",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["runAs"] = map[string]any{"user": 999}
+			},
+		},
+		{
+			name: "runAs rejects unknown keys",
+			mutate: func(d map[string]any) {
+				d["services"].([]any)[0].(map[string]any)["runAs"] = map[string]any{"user": 999, "group": 1000, "fsGroup": 1000}
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -421,6 +445,17 @@ func TestVolumeMountPathAccepted(t *testing.T) {
 		})
 		assert.NoError(t, sch.Validate(doc), "mountPath %s should be valid", p)
 	}
+}
+
+func TestRunAsAccepted(t *testing.T) {
+	t.Parallel()
+	sch, err := schema.Schema()
+	require.NoError(t, err)
+
+	doc := baseDoc(t, func(d map[string]any) {
+		d["services"].([]any)[0].(map[string]any)["runAs"] = map[string]any{"user": 999, "group": 1000}
+	})
+	assert.NoError(t, sch.Validate(doc))
 }
 
 func TestEnvValueAcceptsBothShapes(t *testing.T) {
