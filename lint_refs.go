@@ -97,11 +97,24 @@ func (l *refLinter) lintService(idx int, svc *Service) {
 		l.check(base+".healthcheck.path", hc.Path, allowHealthcheck, nil, "")
 		l.checkList(base+".healthcheck.command", hc.Command, allowHealthcheck, nil)
 	}
+	// init and worker containers run in the same pod, so their names must
+	// be unique across both lists
+	names := make(map[string]bool, len(svc.Init)+len(svc.Workers))
 	for i, ic := range svc.Init {
-		l.lintContainer(fmt.Sprintf("%s.init[%d]", base, i), ic.Image, ic.Command, ic.Args, ic.Env, svc.Env)
+		path := fmt.Sprintf("%s.init[%d]", base, i)
+		l.lintContainer(path, ic.Image, ic.Command, ic.Args, ic.Env, svc.Env)
+		if names[ic.Name] {
+			l.errf(path+".name", "duplicate container name %q", ic.Name)
+		}
+		names[ic.Name] = true
 	}
 	for i, wc := range svc.Workers {
-		l.lintContainer(fmt.Sprintf("%s.workers[%d]", base, i), wc.Image, wc.Command, wc.Args, wc.Env, svc.Env)
+		path := fmt.Sprintf("%s.workers[%d]", base, i)
+		l.lintContainer(path, wc.Image, wc.Command, wc.Args, wc.Env, svc.Env)
+		if names[wc.Name] {
+			l.errf(path+".name", "duplicate container name %q", wc.Name)
+		}
+		names[wc.Name] = true
 	}
 }
 

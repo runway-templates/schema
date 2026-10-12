@@ -41,6 +41,18 @@ func TestLintRefs_UnknownInput(t *testing.T) {
 	assert.Contains(t, issues[0].Message, `unknown input "nope"`)
 }
 
+// Init and worker containers share the pod, so a worker may not reuse an
+// init container's name.
+func TestLintRefs_DuplicateContainerName(t *testing.T) {
+	t.Parallel()
+	tmpl := loadFixture(t, "n8n.yaml")
+	tmpl.Services[0].Workers = append(tmpl.Services[0].Workers, schema.WorkerContainer{Name: "migrate"})
+	issues := refErrors(tmpl)
+	require.Len(t, issues, 1)
+	assert.Equal(t, "services[0].workers[1].name", issues[0].Path)
+	assert.Contains(t, issues[0].Message, `duplicate container name "migrate"`)
+}
+
 func TestLintRefs_UnknownEnvKey(t *testing.T) {
 	t.Parallel()
 	tmpl := loadFixture(t, "valkey.yaml")
