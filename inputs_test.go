@@ -76,16 +76,44 @@ func TestValidateInputs_WrongTypes(t *testing.T) {
 		key   string
 		value any
 	}{
-		"bool for string":    {"postgres_host", true},
-		"string for integer": {"postgres_port", "5432"},
-		"fractional for int": {"postgres_port", 54.32},
-		"integer for string": {"postgres_user", 42},
+		"bool for string":                {"postgres_host", true},
+		"non-numeric string for integer": {"postgres_port", "abc"},
+		"fractional string for integer":  {"postgres_port", "54.32"},
+		"fractional for int":             {"postgres_port", 54.32},
+		"integer for string":             {"postgres_user", 42},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			_, issues := schema.ValidateInputs(tmpl, map[string]any{tc.key: tc.value})
 			assert.Contains(t, inputIssuePaths(issues), "inputs."+tc.key)
 		})
+	}
+}
+
+// Clients that only know strings (CLI, forms) send typed inputs as text.
+func TestValidateInputs_StringForms(t *testing.T) {
+	t.Parallel()
+	tmpl := &schema.Template{
+		Inputs: map[string]schema.Input{
+			"port":  {Type: "integer"},
+			"debug": {Type: "boolean"},
+			"tag":   {Type: "string"},
+		},
+	}
+
+	values, issues := schema.ValidateInputs(tmpl, map[string]any{
+		"port":  "5432",
+		"debug": "false",
+		"tag":   "8.0",
+	})
+	require.Empty(t, issues)
+	assert.Equal(t, int64(5432), values["port"])
+	assert.Equal(t, false, values["debug"])
+	assert.Equal(t, "8.0", values["tag"], "strings stay as they are")
+
+	for _, bad := range []any{"yes", "1", "TRUE", "", []any{true}, map[string]any{"a": true}} {
+		_, issues := schema.ValidateInputs(tmpl, map[string]any{"debug": bad})
+		assert.Contains(t, inputIssuePaths(issues), "inputs.debug", "%v", bad)
 	}
 }
 
@@ -97,6 +125,9 @@ func TestValidateInputs_IntegerBounds(t *testing.T) {
 
 	_, issues = schema.ValidateInputs(tmpl, map[string]any{"postgres_port": 0})
 	assert.Contains(t, inputIssuePaths(issues), "inputs.postgres_port")
+
+	_, issues = schema.ValidateInputs(tmpl, map[string]any{"postgres_port": "70000"})
+	assert.Contains(t, inputIssuePaths(issues), "inputs.postgres_port", "bounds apply to the string form too")
 }
 
 func TestValidateInputs_Pattern(t *testing.T) {

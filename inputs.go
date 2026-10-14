@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"unicode/utf8"
 )
 
@@ -75,17 +76,30 @@ func normalizeValue(typ string, v any) (any, error) {
 		}
 		return s, nil
 	case "integer":
+		// clients that only know strings (CLI, forms) send "42"
+		if s, ok := v.(string); ok {
+			n, err := strconv.ParseInt(s, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("expected an integer, got %q", s)
+			}
+			return n, nil
+		}
 		n, ok := toInt64(v)
 		if !ok {
 			return nil, fmt.Errorf("expected an integer, got %v (%T)", v, v)
 		}
 		return n, nil
 	case "boolean":
-		b, ok := v.(bool)
-		if !ok {
-			return nil, fmt.Errorf("expected a boolean, got %T", v)
+		switch b := v.(type) {
+		case bool:
+			return b, nil
+		case string:
+			// clients that only know strings (CLI, forms) send "true"
+			if b == "true" || b == "false" {
+				return b == "true", nil
+			}
 		}
-		return b, nil
+		return nil, fmt.Errorf("expected a boolean, got %v (%T)", v, v)
 	}
 	return nil, fmt.Errorf("input has unknown type %q", typ)
 }
