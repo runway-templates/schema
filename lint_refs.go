@@ -9,9 +9,10 @@ import (
 // runwayFields are the platform variables templates may reference as
 // ${{ runway.<field> }}. See docs/interpolation/runway.md.
 var runwayFields = map[string]struct{}{
-	"stack": {},
-	"fqdn":  {},
-	"url":   {},
+	"stack":            {},
+	"fqdn":             {},
+	"url":              {},
+	"internal_address": {},
 }
 
 // Secret length bounds for ${{ runway.secret(n) }}.
@@ -203,6 +204,11 @@ func (l *refLinter) checkRunwayField(path string, e Expr) {
 	}
 	if e.Name == "url" && l.cur.Settings != nil && l.cur.Settings.Route != nil && !*l.cur.Settings.Route {
 		l.errf(path, "runway.url is invalid here: settings.route is false for service %q", l.cur.Name)
+	}
+	if e.Name == "internal_address" {
+		if _, ok := l.cur.Env["PORT"]; !ok {
+			l.errf(path, "runway.internal_address needs env.PORT in service %q", l.cur.Name)
+		}
 	}
 }
 
