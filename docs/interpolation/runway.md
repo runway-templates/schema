@@ -4,11 +4,12 @@
 
 Platform-provided values, resolved at render time. Current fields:
 
-| Field          | Value                                                        |
-|----------------|--------------------------------------------------------------|
-| `runway.stack` | Stack name (user-picked or generated). Also the namespace.   |
-| `runway.fqdn`  | The current service's internal DNS name inside the cluster.  |
-| `runway.url`   | The current service's public URL. Invalid when `settings.route` is false. |
+| Field                     | Value                                                        |
+|---------------------------|--------------------------------------------------------------|
+| `runway.stack`            | Stack name (user-picked or generated). Also the namespace.   |
+| `runway.fqdn`             | The current service's internal DNS name inside the cluster.  |
+| `runway.internal_address` | `<fqdn>:<PORT>`, the current service's address inside the cluster. Needs `env.PORT`. No scheme: add `mysql://`, `redis://`, `http://`, … yourself. |
+| `runway.url`              | The current service's public URL. Invalid when `settings.route` is false. |
 
 Unknown fields are a validation error. New fields may be added in later
 schema releases without a version bump. A template that uses a field the

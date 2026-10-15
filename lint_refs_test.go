@@ -161,6 +161,20 @@ func TestLintRefs_RunwayURLRequiresRoute(t *testing.T) {
 	assert.Empty(t, refErrors(routed))
 }
 
+// runway.internal_address is built from env.PORT, so a service without it
+// must not use the field.
+func TestLintRefs_InternalAddressRequiresPort(t *testing.T) {
+	t.Parallel()
+	tmpl := loadFixture(t, "valkey.yaml")
+	tmpl.Services[0].Outputs["ADDRESS"] = "${{ runway.internal_address }}"
+	assert.Empty(t, refErrors(tmpl))
+
+	delete(tmpl.Services[0].Env, "PORT")
+	issues := refErrors(tmpl)
+	require.Len(t, issues, 1)
+	assert.Contains(t, issues[0].Message, "runway.internal_address needs env.PORT")
+}
+
 func TestLintRefs_UnknownRunwayField(t *testing.T) {
 	t.Parallel()
 	tmpl := loadFixture(t, "valkey.yaml")

@@ -65,7 +65,8 @@ a deploy that breaks any of them:
    declared output key; no self-reference; the cross-service graph is a DAG.
 3. Every `env.<KEY>` references a declared env key in scope.
 4. Every `runway.<field>` is a known field; `runway.url` only in services
-   where `settings.route` is not false.
+   where `settings.route` is not false; `runway.internal_address` only in
+   services that declare `env.PORT`.
 5. `runway.secret(n)` has `16 <= n <= 128` and appears only in env values.
 6. Every expression appears only in a context allowed by the table above.
 7. Malformed expressions (`${{` without valid expr + `}}`) are errors.
