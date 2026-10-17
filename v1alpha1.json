@@ -63,7 +63,7 @@
         },
         "category": {
           "type": "string",
-          "enum": ["database", "cache", "search", "storage", "queue", "automation", "cms", "analytics", "monitoring", "messaging", "ai", "developer-tools", "other"],
+          "enum": ["database", "cache", "search", "storage", "queue", "automation", "cms", "analytics", "monitoring", "messaging", "ai", "developer-tools", "security", "other"],
           "description": "Primary category for marketplace browsing."
         },
         "tags": {

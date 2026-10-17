@@ -1,0 +1,143 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/runway-templates/schema/refs/heads/main/v1alpha1.json
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: openbao
+  version: 0.1.0
+  displayName: OpenBao
+  description: |
+    Secrets manager: store secrets, issue dynamic credentials, and encrypt
+    data. Open-source fork of HashiCorp Vault, run by the Linux Foundation.
+    Single node with Raft storage on a volume. Unseals itself on start and
+    sets up an admin login on first start. Published on a public HTTPS
+    route with the web UI.
+  category: security
+  tags: [openbao, vault, secrets, kms, pki, encryption, oss]
+  logo: ./logo.svg
+  documentation: https://openbao.org/docs/
+  website: https://openbao.org
+  source: https://github.com/openbao/openbao
+  license: MPL-2.0
+  maintainer: runway
+
+inputs:
+  image_tag:
+    type: string
+    default: "2.7.1"
+    enum: ["2.7.1", "2.6.4"]
+    description: |
+      OpenBao version. 2.7 is current, 2.6 is the previous line. Upgrades
+      migrate storage on start; do not downgrade.
+
+services:
+  - name: openbao
+    image: "r.planetary-quantum.com/docker-hub-proxy/openbao/openbao:${{ inputs.image_tag }}"
+
+    # The volume is /openbao and starts empty. The image entrypoint writes
+    # BAO_LOCAL_CONFIG to /openbao/config/local.json before anything else,
+    # so create the dirs first, then hand off to it to start the server.
+    command:
+      - sh
+      - -c
+      - mkdir -p /openbao/config /openbao/data && exec docker-entrypoint.sh server
+
+    env:
+      PORT: "8200"
+      # runAs already sets the right user; nothing to chown.
+      SKIP_CHOWN: "true"
+      BAO_API_ADDR: "${{ runway.url }}"
+      BAO_CLUSTER_ADDR: "http://127.0.0.1:8201"
+
+      # The static seal reads its key from BAO_STATIC_SEAL_CURRENT_KEY, so
+      # OpenBao unseals itself on every start. The initialize block runs once,
+      # on the first start: it adds an admin policy, enables userpass, and
+      # creates the admin user. The root token it used is then revoked.
+      BAO_LOCAL_CONFIG:
+        value: |
+          {
+            "ui": true,
+            "disable_mlock": true,
+            "listener": {
+              "tcp": {"address": "0.0.0.0:8200", "tls_disable": true}
+            },
+            "storage": {
+              "raft": {"path": "/openbao/data", "node_id": "openbao"}
+            },
+            "seal": {
+              "static": {
+                "current_key_id": "runway-1",
+                "current_key": "env://BAO_STATIC_SEAL_CURRENT_KEY"
+              }
+            },
+            "initialize": [{"admin": {"request": [
+              {"policy": {
+                "operation": "update",
+                "path": "sys/policies/acl/admin",
+                "data": {"policy": "path \"*\" { capabilities = [\"create\", \"read\", \"update\", \"patch\", \"delete\", \"list\", \"sudo\"] }"}
+              }},
+              {"userpass": {
+                "operation": "update",
+                "path": "sys/auth/userpass",
+                "data": {"type": "userpass"}
+              }},
+              {"user": {
+                "operation": "update",
+                "path": "auth/userpass/users/admin",
+                "data": {
+                  "password": {"eval_type": "string", "eval_source": "env", "env_var": "OPENBAO_ADMIN_PASSWORD", "require_present": true},
+                  "token_policies": ["admin"]
+                }
+              }}
+            ]}}]
+          }
+        description: OpenBao server config, as JSON.
+        warning: |
+          Storage path, node id, and seal settings are tied to the data on
+          the volume. Changing them can leave OpenBao unable to start or
+          unseal. The initialize block only runs on the very first start.
+
+      BAO_STATIC_SEAL_CURRENT_KEY:
+        value: "${{ runway.secret(32) }}"
+        description: |
+          Seal key. Encrypts the root key on the volume, so OpenBao can
+          unseal itself on start. Keep a copy somewhere safe.
+        warning: |
+          Do NOT change or lose this value. Without it OpenBao cannot unseal,
+          and all stored secrets are lost for good. There are no recovery
+          keys. To rotate, follow the static seal rotation steps in the
+          OpenBao docs.
+
+      OPENBAO_ADMIN_PASSWORD:
+        value: "${{ runway.secret(32) }}"
+        description: |
+          Password for the 'admin' user (userpass), set on the first start.
+          The admin user can do everything.
+        warning: |
+          Only read on the very first start. Changing it here will NOT change
+          the password in OpenBao. Change it with
+          'bao write auth/userpass/users/admin/password' instead.
+
+    volume:
+      mountPath: /openbao
+
+    # matches the openbao user in the image
+    runAs:
+      user: 100
+      group: 1000
+
+    healthcheck:
+      type: http
+      # 200 only when initialized, unsealed, and active.
+      path: /v1/sys/health
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+
+    settings:
+      # Apps and the web UI connect over HTTPS; every request needs a token.
+      route: true
+      # OpenBao only writes to the volume.
+      lockdown: true
+
+    minPlan: free-launch
