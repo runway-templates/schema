@@ -41,16 +41,7 @@ jobs:
         with:
           cache: false
           go-version-file: go.mod
-      - name: gofmt
-        run: |
-          unformatted="$(gofmt -l .)"
-          if [ -n "$unformatted" ]; then
-            echo "not gofmt'ed:"
-            echo "$unformatted"
-            exit 1
-          fi
-      - run: go vet ./...
-      - uses: docker://morphy/revive-action@sha256:1ec5904abc4d8b2cd5fbb2987fc79a227f21a4231d757cc9a09a9ee3ab3c328b # v2
+      - run: make lint
 
   test:
     runs-on: ubuntu-latest
@@ -64,8 +55,8 @@ jobs:
         with:
           cache: false
           go-version-file: go.mod
-      - run: go test ./...
-      - run: go build -o tool ./cmd/tool/...
+      - run: make test
+      - run: make build
       - run: ./tool -h
       - name: lint template fixtures
         run: |

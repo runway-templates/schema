@@ -73,6 +73,24 @@ type refLinter struct {
 	issues []Issue
 }
 
+// refScope is what a value may reference: the allowed expression kinds,
+// the visible env keys, and selfKey, the env key being defined when the
+// value is an env value.
+type refScope struct {
+	allowed map[ExprKind]bool
+	env     map[string]bool
+	selfKey string
+}
+
+// container is the part of an init or worker container that can hold
+// references.
+type container struct {
+	image   string
+	command []string
+	args    []string
+	env     map[string]EnvValue
+}
+
 func (l *refLinter) errf(path, format string, args ...any) {
 	l.issues = append(l.issues, Issue{
 		Path:     path,
@@ -86,24 +104,27 @@ func (l *refLinter) lintService(idx int, svc *Service) {
 	base := fmt.Sprintf("services[%d]", idx)
 	mainEnv := envKeys(svc.Env, nil)
 
-	l.check(base+".image", svc.Image, allowImage, nil, "")
-	l.checkList(base+".command", svc.Command, allowCommand, mainEnv)
-	l.checkList(base+".args", svc.Args, allowCommand, mainEnv)
+	commandScope := refScope{allowed: allowCommand, env: mainEnv}
+	healthcheckScope := refScope{allowed: allowHealthcheck}
+
+	l.check(base+".image", svc.Image, refScope{allowed: allowImage})
+	l.checkList(base+".command", svc.Command, commandScope)
+	l.checkList(base+".args", svc.Args, commandScope)
 	l.checkEnv(base+".env", svc.Env, mainEnv)
 
 	for key, value := range svc.Outputs {
-		l.check(base+".outputs."+key, value, allowOutputs, mainEnv, "")
+		l.check(base+".outputs."+key, value, refScope{allowed: allowOutputs, env: mainEnv})
 	}
 	if hc := svc.Healthcheck; hc != nil {
-		l.check(base+".healthcheck.path", hc.Path, allowHealthcheck, nil, "")
-		l.checkList(base+".healthcheck.command", hc.Command, allowHealthcheck, nil)
+		l.check(base+".healthcheck.path", hc.Path, healthcheckScope)
+		l.checkList(base+".healthcheck.command", hc.Command, healthcheckScope)
 	}
 	// init and worker containers run in the same pod, so their names must
 	// be unique across both lists
 	names := make(map[string]bool, len(svc.Init)+len(svc.Workers))
 	for i, ic := range svc.Init {
 		path := fmt.Sprintf("%s.init[%d]", base, i)
-		l.lintContainer(path, ic.Image, ic.Command, ic.Args, ic.Env, svc.Env)
+		l.lintContainer(path, container{image: ic.Image, command: ic.Command, args: ic.Args, env: ic.Env}, svc.Env)
 		if names[ic.Name] {
 			l.errf(path+".name", "duplicate container name %q", ic.Name)
 		}
@@ -111,7 +132,7 @@ func (l *refLinter) lintService(idx int, svc *Service) {
 	}
 	for i, wc := range svc.Workers {
 		path := fmt.Sprintf("%s.workers[%d]", base, i)
-		l.lintContainer(path, wc.Image, wc.Command, wc.Args, wc.Env, svc.Env)
+		l.lintContainer(path, container{image: wc.Image, command: wc.Command, args: wc.Args, env: wc.Env}, svc.Env)
 		if names[wc.Name] {
 			l.errf(path+".name", "duplicate container name %q", wc.Name)
 		}
@@ -121,60 +142,66 @@ func (l *refLinter) lintService(idx int, svc *Service) {
 
 // lintContainer checks an init or worker container. Its env scope is the
 // parent service's env merged with its own overrides.
-func (l *refLinter) lintContainer(base, image string, command, args []string, env, parentEnv map[string]EnvValue) {
-	scope := envKeys(parentEnv, env)
-	l.check(base+".image", image, allowImage, nil, "")
-	l.checkList(base+".command", command, allowCommand, scope)
-	l.checkList(base+".args", args, allowCommand, scope)
-	l.checkEnv(base+".env", env, scope)
+func (l *refLinter) lintContainer(base string, c container, parentEnv map[string]EnvValue) {
+	env := envKeys(parentEnv, c.env)
+	commandScope := refScope{allowed: allowCommand, env: env}
+	l.check(base+".image", c.image, refScope{allowed: allowImage})
+	l.checkList(base+".command", c.command, commandScope)
+	l.checkList(base+".args", c.args, commandScope)
+	l.checkEnv(base+".env", c.env, env)
 }
 
-func (l *refLinter) checkList(base string, values []string, allowed map[ExprKind]bool, env map[string]bool) {
+func (l *refLinter) checkList(base string, values []string, scope refScope) {
 	for i, v := range values {
-		l.check(fmt.Sprintf("%s[%d]", base, i), v, allowed, env, "")
+		l.check(fmt.Sprintf("%s[%d]", base, i), v, scope)
 	}
 }
 
-func (l *refLinter) checkEnv(base string, env map[string]EnvValue, scope map[string]bool) {
+func (l *refLinter) checkEnv(base string, env map[string]EnvValue, visible map[string]bool) {
 	for key, value := range env {
-		l.check(base+"."+key, value.Value, allowEnv, scope, key)
+		l.check(base+"."+key, value.Value, refScope{allowed: allowEnv, env: visible, selfKey: key})
 	}
 }
 
 // check parses s and validates each expression: allowed in this context,
-// and resolvable. selfKey is the env key being defined when s is an env
-// value, to catch values that reference themselves.
-func (l *refLinter) check(path, s string, allowed map[ExprKind]bool, env map[string]bool, selfKey string) {
+// and resolvable.
+func (l *refLinter) check(path, s string, scope refScope) {
 	exprs, err := Expressions(s)
 	if err != nil {
 		l.errf(path, "invalid interpolation: %v", err)
 		return
 	}
 	for _, e := range exprs {
-		if !allowed[e.Kind] {
+		if !scope.allowed[e.Kind] {
 			l.errf(path, "%s is not allowed in this context", e)
 			continue
 		}
-		switch e.Kind {
-		case ExprInput:
-			if _, ok := l.tmpl.Inputs[e.Name]; !ok {
-				l.errf(path, "unknown input %q", e.Name)
-			}
-		case ExprOutput:
-			l.checkOutputRef(path, e)
-		case ExprEnv:
-			if e.Name == selfKey {
-				l.errf(path, "env %q references itself", e.Name)
-			} else if !env[e.Name] {
-				l.errf(path, "unknown env key %q in this service", e.Name)
-			}
-		case ExprRunway:
-			l.checkRunwayField(path, e)
-		case ExprSecret:
-			if e.N < secretMinLen || e.N > secretMaxLen {
-				l.errf(path, "secret length %d out of range [%d, %d]", e.N, secretMinLen, secretMaxLen)
-			}
+		l.checkExpr(path, e, scope)
+	}
+}
+
+func (l *refLinter) checkExpr(path string, e Expr, scope refScope) {
+	switch e.Kind {
+	case ExprInput:
+		if _, ok := l.tmpl.Inputs[e.Name]; !ok {
+			l.errf(path, "unknown input %q", e.Name)
 		}
+	case ExprOutput:
+		l.checkOutputRef(path, e)
+	case ExprEnv:
+		if e.Name == scope.selfKey {
+			l.errf(path, "env %q references itself", e.Name)
+		} else if !scope.env[e.Name] {
+			l.errf(path, "unknown env key %q in this service", e.Name)
+		}
+	case ExprRunway:
+		l.checkRunwayField(path, e)
+	case ExprSecret:
+		if e.N < secretMinLen || e.N > secretMaxLen {
+			l.errf(path, "secret length %d out of range [%d, %d]", e.N, secretMinLen, secretMaxLen)
+		}
+	default:
+		l.errf(path, "unknown expression kind %v", e.Kind)
 	}
 }
 

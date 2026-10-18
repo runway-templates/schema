@@ -11,7 +11,8 @@ import (
 func TestExpressions_AllForms(t *testing.T) {
 	t.Parallel()
 	exprs, err := schema.Expressions(
-		"${{ inputs.image_tag }} ${{services.valkey.outputs.DSN}} ${{ env.PORT }} ${{ runway.fqdn }} ${{ runway.secret(32) }}")
+		"${{ inputs.image_tag }} ${{services.valkey.outputs.DSN}} ${{ env.PORT }} " +
+			"${{ runway.fqdn }} ${{ runway.secret(32) }}")
 	require.NoError(t, err)
 	require.Len(t, exprs, 5)
 

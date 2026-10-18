@@ -193,10 +193,10 @@ func TestLint_Defaults(t *testing.T) {
 
 	t.Run("integer default out of range errors", func(t *testing.T) {
 		t.Parallel()
-		max := 65535
+		maxPort := 65535
 		tmpl := loadFixture(t, "valkey.yaml")
 		tmpl.Inputs = map[string]schema.Input{
-			"port": {Type: "integer", Default: 70000, Max: &max},
+			"port": {Type: "integer", Default: 70000, Max: &maxPort},
 		}
 		got := findIssue(t, schema.Lint(tmpl), "inputs.port")
 		require.NotNil(t, got)
