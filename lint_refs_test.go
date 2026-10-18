@@ -23,7 +23,8 @@ func refErrors(t *schema.Template) []schema.Issue {
 // Every checked-in template must be free of reference errors.
 func TestLintRefs_ValidFixturesClean(t *testing.T) {
 	t.Parallel()
-	for _, f := range []string{"mariadb.yaml", "meilisearch.yaml", "mongodb.yaml", "n8n.yaml", "no-plan.yaml", "valkey.yaml"} {
+	fixtures := []string{"mariadb.yaml", "meilisearch.yaml", "mongodb.yaml", "n8n.yaml", "no-plan.yaml", "valkey.yaml"}
+	for _, f := range fixtures {
 		t.Run(f, func(t *testing.T) {
 			t.Parallel()
 			assert.Empty(t, refErrors(loadFixture(t, f)))
@@ -135,9 +136,12 @@ func TestLintRefs_CyclicOutputs(t *testing.T) {
 	tmpl := loadFixture(t, "valkey.yaml")
 	tmpl.Services[0].Env["PEER"] = schema.EnvValue{Value: "${{ services.app.outputs.URL }}"}
 	tmpl.Services = append(tmpl.Services, schema.Service{
-		Name:    "app",
-		Image:   "nginx:1.27",
-		Env:     map[string]schema.EnvValue{"PORT": {Value: "8080"}, "REDIS_DSN": {Value: "${{ services.valkey.outputs.DSN }}"}},
+		Name:  "app",
+		Image: "nginx:1.27",
+		Env: map[string]schema.EnvValue{
+			"PORT":      {Value: "8080"},
+			"REDIS_DSN": {Value: "${{ services.valkey.outputs.DSN }}"},
+		},
 		Outputs: map[string]string{"URL": "http://app"},
 	})
 	issues := refErrors(tmpl)

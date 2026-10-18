@@ -134,8 +134,9 @@ func lintMinPlan(t *Template) []Issue {
 	for i, s := range t.Services {
 		if strings.TrimSpace(s.MinPlan) == "" {
 			issues = append(issues, Issue{
-				Path:     fmt.Sprintf("services[%d].minPlan", i),
-				Message:  "no minPlan declared; the platform will assume the cheapest plan that fits, which may surprise users on free or dev tiers",
+				Path: fmt.Sprintf("services[%d].minPlan", i),
+				Message: "no minPlan declared; the platform will assume the cheapest plan that fits, " +
+					"which may surprise users on free or dev tiers",
 				Severity: SeverityWarning,
 			})
 		}

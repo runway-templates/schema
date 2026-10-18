@@ -95,7 +95,8 @@ func TestMinimalValid(t *testing.T) {
 // error isolates the rule under test.
 func baseDoc(t *testing.T, mutate func(map[string]any)) any {
 	t.Helper()
-	doc := decodeJSON(t, minimalValid).(map[string]any)
+	doc, ok := decodeJSON(t, minimalValid).(map[string]any)
+	require.True(t, ok)
 	mutate(doc)
 	return doc
 }
@@ -369,7 +370,9 @@ func TestSchemaRules(t *testing.T) {
 		{
 			name: "runAs rejects unknown keys",
 			mutate: func(d map[string]any) {
-				d["services"].([]any)[0].(map[string]any)["runAs"] = map[string]any{"user": 999, "group": 1000, "fsGroup": 1000}
+				d["services"].([]any)[0].(map[string]any)["runAs"] = map[string]any{
+					"user": 999, "group": 1000, "fsGroup": 1000,
+				}
 			},
 		},
 	}

@@ -50,18 +50,25 @@ func ValidateInputs(t *Template, values map[string]any) (map[string]any, []Issue
 			}
 			value = in.Default
 		}
-		v, err := normalizeValue(in.Type, value)
+		v, err := validateInput(in, value)
 		if err != nil {
-			errf(name, "%v", err)
-			continue
-		}
-		if err := checkConstraints(in, v); err != nil {
 			errf(name, "%v", err)
 			continue
 		}
 		normalized[name] = v
 	}
 	return normalized, issues
+}
+
+func validateInput(in Input, value any) (any, error) {
+	v, err := normalizeValue(in.Type, value)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkConstraints(in, v); err != nil {
+		return nil, err
+	}
+	return v, nil
 }
 
 // normalizeValue converts v to the canonical Go type for an input type:
@@ -76,32 +83,42 @@ func normalizeValue(typ string, v any) (any, error) {
 		}
 		return s, nil
 	case "integer":
-		// clients that only know strings (CLI, forms) send "42"
-		if s, ok := v.(string); ok {
-			n, err := strconv.ParseInt(s, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("expected an integer, got %q", s)
-			}
-			return n, nil
-		}
-		n, ok := toInt64(v)
-		if !ok {
-			return nil, fmt.Errorf("expected an integer, got %v (%T)", v, v)
+		return normalizeInteger(v)
+	case "boolean":
+		return normalizeBoolean(v)
+	default:
+		return nil, fmt.Errorf("input has unknown type %q", typ)
+	}
+}
+
+func normalizeInteger(v any) (any, error) {
+	// clients that only know strings (CLI, forms) send "42"
+	if s, ok := v.(string); ok {
+		n, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("expected an integer, got %q", s)
 		}
 		return n, nil
-	case "boolean":
-		switch b := v.(type) {
-		case bool:
-			return b, nil
-		case string:
-			// clients that only know strings (CLI, forms) send "true"
-			if b == "true" || b == "false" {
-				return b == "true", nil
-			}
-		}
-		return nil, fmt.Errorf("expected a boolean, got %v (%T)", v, v)
 	}
-	return nil, fmt.Errorf("input has unknown type %q", typ)
+	n, ok := toInt64(v)
+	if !ok {
+		return nil, fmt.Errorf("expected an integer, got %v (%T)", v, v)
+	}
+	return n, nil
+}
+
+func normalizeBoolean(v any) (any, error) {
+	switch b := v.(type) {
+	case bool:
+		return b, nil
+	case string:
+		// clients that only know strings (CLI, forms) send "true"
+		if b == "true" || b == "false" {
+			return b == "true", nil
+		}
+	default:
+	}
+	return nil, fmt.Errorf("expected a boolean, got %v (%T)", v, v)
 }
 
 func toInt64(v any) (int64, bool) {
@@ -119,40 +136,57 @@ func toInt64(v any) (int64, bool) {
 		if err == nil {
 			return i, true
 		}
+	default:
 	}
 	return 0, false
 }
 
 // checkConstraints applies the per-type input rules to a normalized value.
 func checkConstraints(in Input, v any) error {
+	var err error
 	switch tv := v.(type) {
 	case string:
-		length := utf8.RuneCountInString(tv)
-		if in.MinLength != nil && length < *in.MinLength {
-			return fmt.Errorf("must be at least %d characters, got %d", *in.MinLength, length)
-		}
-		if in.MaxLength != nil && length > *in.MaxLength {
-			return fmt.Errorf("must be at most %d characters, got %d", *in.MaxLength, length)
-		}
-		if in.Pattern != "" {
-			re, err := regexp.Compile(in.Pattern)
-			if err != nil {
-				return fmt.Errorf("pattern in template does not compile: %v", err)
-			}
-			if !re.MatchString(tv) {
-				return fmt.Errorf("must match pattern %s", in.Pattern)
-			}
-		}
+		err = checkString(in, tv)
 	case int64:
-		if in.Min != nil && tv < int64(*in.Min) {
-			return fmt.Errorf("must be at least %d, got %d", *in.Min, tv)
-		}
-		if in.Max != nil && tv > int64(*in.Max) {
-			return fmt.Errorf("must be at most %d, got %d", *in.Max, tv)
-		}
+		err = checkInteger(in, tv)
+	default:
+	}
+	if err != nil {
+		return err
 	}
 	if len(in.Enum) > 0 && !enumContains(in.Enum, v) {
 		return fmt.Errorf("must be one of %v", in.Enum)
+	}
+	return nil
+}
+
+func checkString(in Input, s string) error {
+	length := utf8.RuneCountInString(s)
+	if in.MinLength != nil && length < *in.MinLength {
+		return fmt.Errorf("must be at least %d characters, got %d", *in.MinLength, length)
+	}
+	if in.MaxLength != nil && length > *in.MaxLength {
+		return fmt.Errorf("must be at most %d characters, got %d", *in.MaxLength, length)
+	}
+	if in.Pattern == "" {
+		return nil
+	}
+	re, err := regexp.Compile(in.Pattern)
+	if err != nil {
+		return fmt.Errorf("pattern in template does not compile: %v", err)
+	}
+	if !re.MatchString(s) {
+		return fmt.Errorf("must match pattern %s", in.Pattern)
+	}
+	return nil
+}
+
+func checkInteger(in Input, n int64) error {
+	if in.Min != nil && n < int64(*in.Min) {
+		return fmt.Errorf("must be at least %d, got %d", *in.Min, n)
+	}
+	if in.Max != nil && n > int64(*in.Max) {
+		return fmt.Errorf("must be at most %d, got %d", *in.Max, n)
 	}
 	return nil
 }
@@ -168,6 +202,7 @@ func enumContains(enum []any, v any) bool {
 			if n, ok := toInt64(e); ok && n == tv {
 				return true
 			}
+		default:
 		}
 	}
 	return false
