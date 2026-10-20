@@ -121,10 +121,14 @@ services:
     volume:
       mountPath: /openbao
 
-    # matches the openbao user in the image
+    # The image already runs as openbao; this makes the volume writable for
+    # its group.
     runAs:
       user: 100
       group: 1000
+
+    outputs:
+      URL: "http://${{ runway.internal_address }}"
 
     healthcheck:
       type: http
