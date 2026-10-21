@@ -8,7 +8,7 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
-require github.com/github/go-spdx/v2 v2.7.0
+require github.com/github/go-spdx/v2 v2.7.1
 
 require go.yaml.in/yaml/v3 v3.0.5 // indirect
 
