@@ -1,0 +1,28 @@
+name: template-release
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: runway-templates/schema/.github/actions/setup-tool@main
+      - run: tool lint template.yaml
+      - name: create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          sha=$(gh api "repos/${GH_REPO}/git/ref/tags/${TAG}" --jq .object.sha)
+          gh api "repos/${GH_REPO}/git/tags/${sha}" --jq .message \
+            | sed '/^-----BEGIN /,$d' | tail -n +3 > notes.md
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md

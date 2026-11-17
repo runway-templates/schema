@@ -68,6 +68,15 @@ func main() {
 				Arguments: []cli.Argument{argPath},
 				Action:    validateAction,
 			},
+			{
+				Name:  "release",
+				Usage: "check the template repository and push a signed version tag",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "dry-run", Usage: "run checks only"},
+					&cli.BoolFlag{Name: "yes", Aliases: []string{"y"}, Usage: "skip confirmation"},
+				},
+				Action: releaseAction,
+			},
 		},
 	}
 
