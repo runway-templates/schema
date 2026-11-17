@@ -1,0 +1,53 @@
+name: Existing template
+description: Report a problem with a template, or suggest a change.
+title: "<template>: "
+labels: [template]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues for all templates are tracked in this repository.
+
+        Do you already have a fix? Pull requests are very welcome in the repository of the template.
+  - type: input
+    id: template
+    attributes:
+      label: Template
+      placeholder: mariadb
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Template version
+      description: Shown by `runway app show`.
+      placeholder: 0.2.0
+    validations:
+      required: false
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is this about?
+      options:
+        - Problem
+        - New version of the software
+        - New input or option
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What happened, or what should change? Add the inputs you used and any logs.
+    validations:
+      required: true
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Do you want to work on this?
+      options:
+        - "No"
+        - "Yes, I will open a pull request"
+    validations:
+      required: true
