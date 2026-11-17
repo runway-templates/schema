@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Templates guide
+    url: https://www.runway.horse/docs/guides/templates/
+    about: How to deploy and use templates on Runway.

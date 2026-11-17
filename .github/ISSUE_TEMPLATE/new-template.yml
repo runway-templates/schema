@@ -1,0 +1,104 @@
+name: New template
+description: Request a new template, or offer to build one.
+title: "New template: "
+labels: [new-template]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping to grow the template catalog!
+
+        Each template lives in its own repository in this organization.
+        If you want to build the template, we create the repository and give you access.
+
+        Is this about a template that already exists? Use the "Existing template" form instead.
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      description: The software you want a template for.
+      placeholder: PostgreSQL
+    validations:
+      required: true
+  - type: input
+    id: website
+    attributes:
+      label: Website
+      placeholder: https://www.postgresql.org
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source code
+      placeholder: https://github.com/postgres/postgres
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: License
+      description: SPDX identifier of the software.
+      placeholder: PostgreSQL
+    validations:
+      required: true
+  - type: input
+    id: image
+    attributes:
+      label: Container image
+      description: The image the template should run. Official images are preferred.
+      placeholder: docker.io/library/postgres
+    validations:
+      required: false
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - database
+        - cache
+        - search
+        - storage
+        - queue
+        - automation
+        - cms
+        - analytics
+        - monitoring
+        - messaging
+        - ai
+        - developer-tools
+        - security
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What do you want to use it for? Tell us about storage, public access or other needs.
+    validations:
+      required: true
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Do you want to build this template?
+      options:
+        - "No, this is a request"
+        - "Yes, I want to build and maintain it"
+        - "Yes, I can help with it"
+    validations:
+      required: true
+  - type: input
+    id: maintainers
+    attributes:
+      label: GitHub users
+      description: Who needs access to the new repository? Leave empty if this is only a request.
+      placeholder: "@octocat, @hubot"
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+    validations:
+      required: false
