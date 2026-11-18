@@ -10,7 +10,7 @@ require (
 
 require (
 	github.com/github/go-spdx/v2 v2.8.0
-	golang.org/x/mod v0.42.0
+	golang.org/x/mod v0.43.0
 )
 
 require go.yaml.in/yaml/v3 v3.0.5 // indirect
