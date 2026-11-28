@@ -1,6 +1,7 @@
 package schema_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/runway-templates/schema"
@@ -226,4 +227,99 @@ func TestLint_Defaults(t *testing.T) {
 			})
 		}
 	})
+}
+
+// Connection inputs must fit the value the UI fills in, and each part of
+// the URL goes to one input per category.
+func TestLint_Connections(t *testing.T) {
+	t.Parallel()
+
+	t.Run("duplicate field errors", func(t *testing.T) {
+		t.Parallel()
+		require.NoError(t, schema.ValidateFile(lintFixture("connection-duplicate-field.yaml")))
+
+		issues, err := schema.LintFile(lintFixture("connection-duplicate-field.yaml"))
+		require.NoError(t, err)
+		got := findIssue(t, issues, "inputs.db_host_again")
+		require.NotNil(t, got)
+		assert.Equal(t, schema.SeverityError, got.Severity)
+		assert.Contains(t, got.Message, "already taken by input db_host")
+	})
+
+	t.Run("full URL in integer input errors", func(t *testing.T) {
+		t.Parallel()
+		require.NoError(t, schema.ValidateFile(lintFixture("connection-wrong-type.yaml")))
+
+		issues, err := schema.LintFile(lintFixture("connection-wrong-type.yaml"))
+		require.NoError(t, err)
+		got := findIssue(t, issues, "inputs.database_url")
+		require.NotNil(t, got)
+		assert.Equal(t, schema.SeverityError, got.Severity)
+		assert.Contains(t, got.Message, "needs type string")
+	})
+
+	cases := []struct {
+		name   string
+		inputs map[string]schema.Input
+		bad    []string
+	}{
+		{
+			name: "full URL and fields side by side",
+			inputs: map[string]schema.Input{
+				"db_url":  {Type: "string", Category: "postgres-connection"},
+				"db_host": {Type: "string", Category: "postgres-connection", Field: "host"},
+				"db_port": {Type: "integer", Category: "postgres-connection", Field: "port"},
+			},
+		},
+		{
+			name: "same field in different categories",
+			inputs: map[string]schema.Input{
+				"db_host":    {Type: "string", Category: "postgres-connection", Field: "host"},
+				"cache_host": {Type: "string", Category: "cache-connection", Field: "host"},
+			},
+		},
+		{
+			name: "two full URLs in one category",
+			inputs: map[string]schema.Input{
+				"a_url": {Type: "string", Category: "s3-connection"},
+				"b_url": {Type: "string", Category: "s3-connection"},
+			},
+			bad: []string{"inputs.b_url"},
+		},
+		{
+			name: "integer field other than port",
+			inputs: map[string]schema.Input{
+				"db_user": {Type: "integer", Category: "postgres-connection", Field: "user"},
+			},
+			bad: []string{"inputs.db_user"},
+		},
+		{
+			name: "boolean connection input",
+			inputs: map[string]schema.Input{
+				"db_tls": {Type: "boolean", Category: "postgres-connection", Field: "port"},
+			},
+			bad: []string{"inputs.db_tls"},
+		},
+		{
+			name: "other categories are not checked",
+			inputs: map[string]schema.Input{
+				"a": {Type: "integer", Category: "smtp-credentials"},
+				"b": {Type: "integer", Category: "smtp-credentials"},
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tmpl := loadFixture(t, "valkey.yaml")
+			tmpl.Inputs = tc.inputs
+			var got []string
+			for _, is := range schema.Lint(tmpl) {
+				if _, ok := tc.inputs[strings.TrimPrefix(is.Path, "inputs.")]; ok {
+					got = append(got, is.Path)
+				}
+			}
+			assert.ElementsMatch(t, tc.bad, got)
+		})
+	}
 }

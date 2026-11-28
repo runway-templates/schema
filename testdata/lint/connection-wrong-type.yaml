@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../v1alpha1.json
+# The full URL goes into an integer input.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: connection-wrong-type
+  version: 1.0.0
+  displayName: Connection wrong type
+  description: Connection input with a type the URL does not fit.
+  category: other
+
+inputs:
+  database_url:
+    type: integer
+    category: postgres-connection
+
+services:
+  - name: app
+    image: example.com/app:1
+    env:
+      PORT: "8080"
+      DATABASE_URL: "${{ inputs.database_url }}"
+    minPlan: free-launch

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../../v1alpha1.json
+# violation: 'field' is only valid with a '*-connection' category.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: demo
+  version: 1.0.0
+  displayName: Demo
+  description: A demo template.
+  category: other
+
+inputs:
+  smtp_host:
+    type: string
+    category: smtp-credentials
+    field: host
+
+services:
+  - name: web
+    image: nginx:1.27

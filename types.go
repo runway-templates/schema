@@ -51,6 +51,9 @@ type Input struct {
 	MaxLength   *int   `json:"maxLength,omitempty"`
 	Pattern     string `json:"pattern,omitempty"`
 	Category    string `json:"category,omitempty"`
+	// Field is the part of the connection URL the input takes. Empty
+	// means the full URL. Only set with a connection category.
+	Field string `json:"field,omitempty"`
 }
 
 // Service is one deployable unit of a template. Each service becomes its
