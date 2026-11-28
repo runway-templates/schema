@@ -44,6 +44,7 @@ inputs:
     type: string
     required: true
     category: postgres-connection
+    field: host
     description: Postgres hostname.
   postgres_port:
     type: integer
@@ -51,24 +52,29 @@ inputs:
     min: 1
     max: 65535
     category: postgres-connection
+    field: port
   postgres_database:
     type: string
     required: true
     category: postgres-connection
+    field: path
   postgres_user:
     type: string
     required: true
     category: postgres-connection
+    field: user
   postgres_password:
     type: string
     required: true
     secret: true
     category: postgres-connection
+    field: password
 
   redis_host:
     type: string
     required: true
-    category: redis-connection
+    category: cache-connection
+    field: host
     description: |
       Redis or Valkey hostname. Used for queue state and webhook coordination
       between the main process and the worker.
@@ -77,12 +83,14 @@ inputs:
     default: 6379
     min: 1
     max: 65535
-    category: redis-connection
+    category: cache-connection
+    field: port
   redis_password:
     type: string
     required: true
     secret: true
-    category: redis-connection
+    category: cache-connection
+    field: password
 
 services:
   - name: n8n

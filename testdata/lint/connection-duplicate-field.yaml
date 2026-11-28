@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=../../v1alpha1.json
+# Two inputs take the same part of the postgres URL.
+apiVersion: schema.runway.horse/templates/v1alpha1
+kind: Template
+
+metadata:
+  name: connection-duplicate-field
+  version: 1.0.0
+  displayName: Connection duplicate field
+  description: Two inputs with the same connection field.
+  category: other
+
+inputs:
+  db_host:
+    type: string
+    category: postgres-connection
+    field: host
+  db_host_again:
+    type: string
+    category: postgres-connection
+    field: host
+
+services:
+  - name: app
+    image: example.com/app:1
+    env:
+      PORT: "8080"
+      DB_HOST: "${{ inputs.db_host }}"
+      DB_HOST_AGAIN: "${{ inputs.db_host_again }}"
+    minPlan: free-launch

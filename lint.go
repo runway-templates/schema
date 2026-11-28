@@ -62,7 +62,67 @@ func Lint(t *Template) []Issue {
 	issues = append(issues, lintMinPlan(t)...)
 	issues = append(issues, lintPort(t)...)
 	issues = append(issues, lintDefaults(t)...)
+	issues = append(issues, lintConnections(t)...)
 	return issues
+}
+
+// connectionCategories can be filled from a Runway service. The UI fills
+// each input of such a category with the service's URL or a part of it.
+var connectionCategories = map[string]struct{}{
+	"postgres-connection": {},
+	"cache-connection":    {},
+	"s3-connection":       {},
+}
+
+// lintConnections checks inputs of a connection category: the input type
+// must fit the value the UI fills in, and each part of the URL goes to one
+// input only.
+func lintConnections(t *Template) []Issue {
+	var issues []Issue
+	errf := func(name, format string, args ...any) {
+		issues = append(issues, Issue{
+			Path:     "inputs." + name,
+			Message:  fmt.Sprintf(format, args...),
+			Severity: SeverityError,
+		})
+	}
+
+	// category -> field -> input name; "" is the full URL
+	seen := map[string]map[string]string{}
+	for _, name := range slices.Sorted(maps.Keys(t.Inputs)) {
+		in := t.Inputs[name]
+		if _, ok := connectionCategories[in.Category]; !ok {
+			continue
+		}
+
+		if !connectionTypeOK(in) {
+			errf(name, "%s needs type string (or integer for field port), got %s", fieldLabel(in.Field), in.Type)
+		}
+
+		if seen[in.Category] == nil {
+			seen[in.Category] = map[string]string{}
+		}
+		if other, ok := seen[in.Category][in.Field]; ok {
+			errf(name, "%s of %s is already taken by input %s", fieldLabel(in.Field), in.Category, other)
+			continue
+		}
+		seen[in.Category][in.Field] = name
+	}
+	return issues
+}
+
+func connectionTypeOK(in Input) bool {
+	if in.Type == "string" {
+		return true
+	}
+	return in.Field == "port" && in.Type == "integer"
+}
+
+func fieldLabel(field string) string {
+	if field == "" {
+		return "the full URL"
+	}
+	return "field " + field
 }
 
 // lintDefaults checks each input's default against that input's own

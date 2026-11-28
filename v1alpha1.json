@@ -163,13 +163,25 @@
         },
         "category": {
           "type": "string",
-          "enum": ["postgres-connection", "redis-connection", "smtp-credentials", "s3-credentials", "oauth-credentials", "general"],
+          "enum": ["postgres-connection", "cache-connection", "s3-connection", "smtp-credentials", "oauth-credentials", "general"],
           "default": "general",
-          "description": "UI hint. Inputs in the same category may be grouped and offered platform shortcuts (e.g. 'Create a Postgres add-on to fill these in')."
+          "description": "UI hint. Inputs in the same category may be grouped and offered platform shortcuts. Inputs in a '*-connection' category can be filled from an existing Runway service of that type (postgres, cache, s3)."
+        },
+        "field": {
+          "type": "string",
+          "enum": ["host", "port", "user", "password", "path"],
+          "description": "Part of the connection URL (scheme://user:password@host:port/path) this input takes. Without it, the input takes the full URL. Only valid with a '*-connection' category."
         }
       },
       "additionalProperties": false,
       "allOf": [
+        {
+          "if": { "required": ["field"] },
+          "then": {
+            "required": ["category"],
+            "properties": { "category": { "enum": ["postgres-connection", "cache-connection", "s3-connection"] } }
+          }
+        },
         {
           "if": { "properties": { "type": { "const": "boolean" } } },
           "then": {
